@@ -5,6 +5,7 @@ coverage/
 dist/
 out/
 *.vsix
+!vsix/*.vsix
 *.zip
 
 # Local secrets and machine-specific authentication files

@@ -2,6 +2,12 @@
 
 An offline VSCode language mode for BigQuery GoogleSQL. Provides keyword, function, data type, parameter and identifier highlighting, comment support, bracket auto-closing, basic indentation and a screenshot-matched reference palette.
 
+## Download VSIX
+
+Download [BigQuery GoogleSQL Language v0.2.3](vsix/bigquery-sql-language-0.2.3.vsix) and install it with **Extensions → ... → Install from VSIX** in VSCode.
+
+SHA-256: `7abc62101bd56927291ae71a160b55cc81c400218087b86c5614916b98fddbfa`
+
 ## Reference palette
 
 The extension applies foreground colors, italic styling, and subtle inline backgrounds **only to GoogleSQL editors**:

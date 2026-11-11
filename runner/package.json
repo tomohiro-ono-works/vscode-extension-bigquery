@@ -1,0 +1,53 @@
+{
+  "name": "bigquery-sql-runner",
+  "displayName": "BigQuery SQL Runner",
+  "description": "Google Cloud CLI login, BigQuery dry run, and explicit GoogleSQL execution from Visual Studio Code.",
+  "version": "0.1.0",
+  "publisher": "tomohiro-ono-works",
+  "license": "MIT",
+  "engines": {"vscode": "^1.85.0"},
+  "main": "./src/extension.js",
+  "activationEvents": [
+    "onCommand:bigquerySqlRunner.login",
+    "onCommand:bigquerySqlRunner.dryRun",
+    "onCommand:bigquerySqlRunner.execute"
+  ],
+  "extensionKind": ["workspace"],
+  "categories": ["Other"],
+  "keywords": ["BigQuery", "GoogleSQL", "Google Cloud", "SQL", "dry run"],
+  "contributes": {
+    "commands": [
+      {"command": "bigquerySqlRunner.login", "title": "BigQuery: Log in with Google Cloud CLI"},
+      {"command": "bigquerySqlRunner.dryRun", "title": "BigQuery: Dry Run SQL"},
+      {"command": "bigquerySqlRunner.execute", "title": "BigQuery: Execute SQL"}
+    ],
+    "menus": {
+      "editor/context": [
+        {"command": "bigquerySqlRunner.dryRun", "when": "editorLangId == googlesql || editorLangId == sql", "group": "1_modification@10"},
+        {"command": "bigquerySqlRunner.execute", "when": "editorLangId == googlesql || editorLangId == sql", "group": "1_modification@11"}
+      ]
+    },
+    "configuration": {
+      "title": "BigQuery SQL Runner",
+      "properties": {
+        "bigquerySqlRunner.projectId": {
+          "type": "string", "default": "",
+          "description": "Google Cloud project ID. Empty uses the active `gcloud` CLI project."
+        },
+        "bigquerySqlRunner.location": {
+          "type": "string", "default": "",
+          "description": "Optional BigQuery location, for example asia-northeast1 or US."
+        },
+        "bigquerySqlRunner.maxRows": {
+          "type": "integer", "default": 100, "minimum": 1, "maximum": 1000,
+          "description": "Maximum displayed result rows (1 to 1000)."
+        },
+        "bigquerySqlRunner.maximumBytesBilled": {
+          "type": "string", "default": "1000000000", "pattern": "^[1-9][0-9]*$",
+          "description": "Per-query billing cap in bytes for explicit execution (default 1,000,000,000 bytes)."
+        }
+      }
+    }
+  },
+  "scripts": {"test": "node --test test/*.test.js"}
+}

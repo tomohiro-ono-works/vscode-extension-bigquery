@@ -8,6 +8,14 @@ Download [BigQuery GoogleSQL Language v0.2.3](vsix/bigquery-sql-language-0.2.3.v
 
 SHA-256: `7abc62101bd56927291ae71a160b55cc81c400218087b86c5614916b98fddbfa`
 
+## BigQuery SQL Runner (separate VSIX)
+
+For authentication, BigQuery dry runs and explicit SQL execution, install the independent [BigQuery SQL Runner v0.1.0](vsix/bigquery-sql-runner-0.1.0.vsix).
+
+SHA-256: `6799c2e04c3b49cce272e254e2851122e388f2496289bd4da4aea2a7efb15d74`
+
+This runner requires the official Google Cloud CLI (`gcloud` and `bq`) on your computer. It uses the CLI's existing login, prompts for confirmation before executing SQL, and does not package credentials. See [Runner setup and safety notes](runner/README.md).
+
 ## Reference palette
 
 The extension applies foreground colors, italic styling, and subtle inline backgrounds **only to GoogleSQL editors**:

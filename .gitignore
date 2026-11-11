@@ -1,0 +1,23 @@
+# Dependency caches and local build artifacts
+node_modules/
+.vscode-test/
+coverage/
+dist/
+out/
+*.vsix
+*.zip
+
+# Local secrets and machine-specific authentication files
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+*credentials*.json
+*service-account*.json
+
+# Editor/OS artifacts
+.DS_Store
+Thumbs.db

@@ -1,0 +1,172 @@
+{
+  "information_for_contributors": [
+    "This file has been converted from https://github.com/microsoft/vscode-mssql/blob/master/extensions/mssql/syntaxes/SQL.plist",
+    "If you want to provide a fix or improvement, please create a pull request against the original repository.",
+    "Once accepted there, we are happy to receive an update request."
+  ],
+  "version": "https://github.com/microsoft/vscode-mssql/commit/684648ee5414eb2d9df22b0392ef05079f91e44e",
+  "name": "BigQuery GoogleSQL",
+  "scopeName": "source.googlesql",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "name": "entity.name.quoted.googlesql",
+      "begin": "`",
+      "end": "`",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.quoted.begin.googlesql"
+        }
+      },
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.quoted.end.googlesql"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#string_escape"
+        }
+      ]
+    },
+    {
+      "name": "variable.system.googlesql",
+      "match": "@@[A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)*\\b"
+    },
+    {
+      "name": "variable.parameter.googlesql",
+      "match": "@[A-Za-z_][A-Za-z0-9_]*\\b"
+    },
+    {
+      "name": "support.function.builtin.googlesql",
+      "match": "(?i:\\b(?:SAFE_CONVERT_BYTES_TO_STRING|JSON_EXTRACT_STRING_ARRAY|GENERATE_TIMESTAMP_ARRAY|ST_GEOGPOINTFROMGEOHASH|NORMALIZE_AND_CASEFOLD|ST_BUFFERWITHTOLERANCE|ST_MAKEPOLYGONORIENTED|APPROX_COUNT_DISTINCT|CODE_POINTS_TO_STRING|CODE_POINTS_TO_BYTES|ST_HAUSDORFFDISTANCE|DATE_FROM_UNIX_DATE|GENERATE_DATE_ARRAY|JSON_EXTRACT_SCALAR|JSON_EXTRACT_ARRAY|REGEXP_EXTRACT_ALL|ST_GEOGFROMGEOJSON|CURRENT_TIMESTAMP|JSON_ARRAY_APPEND|JSON_ARRAY_INSERT|TIMESTAMP_SECONDS|APPROX_QUANTILES|APPROX_TOP_COUNT|ARRAY_CONCAT_AGG|CHARACTER_LENGTH|CURRENT_DATETIME|FARM_FINGERPRINT|FORMAT_TIMESTAMP|JSON_QUERY_ARRAY|JSON_STRIP_NULLS|JSON_VALUE_ARRAY|ST_CLUSTERDBSCAN|ST_INTERIORRINGS|ST_INTERSECTSBOX|ST_NUMGEOMETRIES|TIMESTAMP_MICROS|TIMESTAMP_MILLIS|ARRAY_TO_STRING|CONTAINS_SUBSTR|FORMAT_DATETIME|PARSE_TIMESTAMP|PERCENTILE_CONT|PERCENTILE_DISC|REGEXP_CONTAINS|ST_CENTROID_AGG|ST_CLOSESTPOINT|ST_EXTERNALRING|ST_GEOGFROMTEXT|ST_GEOMETRYTYPE|ST_INTERSECTION|ST_ISCOLLECTION|TIMESTAMP_TRUNC|APPROX_TOP_SUM|DATETIME_TRUNC|GENERATE_ARRAY|PARSE_DATETIME|REGEXP_EXTRACT|REGEXP_REPLACE|ST_GEOGFROMWKB|ST_MAKEPOLYGON|ST_MAXDISTANCE|TIMESTAMP_DIFF|TO_CODE_POINTS|TO_JSON_STRING|ARRAY_REVERSE|DATETIME_DIFF|EDIT_DISTANCE|MAKE_INTERVAL|REGEXP_SUBSTR|SAFE_MULTIPLY|SAFE_SUBTRACT|ST_CONVEXHULL|ST_DIFFERENCE|ST_INTERSECTS|ST_SNAPTOGRID|ST_STARTPOINT|TIMESTAMP_ADD|TIMESTAMP_SUB|ARRAY_CONCAT|ARRAY_LENGTH|CURRENT_DATE|CURRENT_TIME|DATETIME_ADD|DATETIME_SUB|JSON_EXTRACT|OCTET_LENGTH|PERCENT_RANK|RANGE_BUCKET|REGEXP_INSTR|ST_COVEREDBY|ST_DIMENSION|ST_GEOGPOINT|ST_NUMPOINTS|ST_PERIMETER|ST_UNION_AGG|UNIX_SECONDS|ARRAY_FIRST|ARRAY_SLICE|BYTE_LENGTH|CHAR_LENGTH|FIRST_VALUE|FORMAT_DATE|FORMAT_TIME|FROM_BASE32|FROM_BASE64|IEEE_DIVIDE|JSON_OBJECT|JSON_REMOVE|LAX_FLOAT64|LOGICAL_AND|SAFE_DIVIDE|SAFE_NEGATE|ST_ASBINARY|ST_BOUNDARY|ST_CENTROID|ST_CONTAINS|ST_DISJOINT|ST_DISTANCE|ST_ENDPOINT|ST_ISCLOSED|ST_MAKELINE|ST_SIMPLIFY|STARTS_WITH|STDDEV_SAMP|UNIX_MICROS|UNIX_MILLIS|ARRAY_LAST|COVAR_SAMP|DATE_TRUNC|DENSE_RANK|JSON_ARRAY|JSON_QUERY|JSON_VALUE|LAST_VALUE|LAX_STRING|LOGICAL_OR|PARSE_DATE|PARSE_JSON|PARSE_TIME|ROW_NUMBER|ST_DWITHIN|ST_GEOHASH|ST_ISEMPTY|ST_NPOINTS|ST_TOUCHES|STDDEV_POP|STRING_AGG|TIME_TRUNC|ARRAY_AGG|BIT_COUNT|COVAR_POP|CUME_DIST|DATE_DIFF|ENDS_WITH|JSON_KEYS|JSON_TYPE|LAX_INT64|NORMALIZE|NTH_VALUE|SAFE_CAST|ST_ASTEXT|ST_BUFFER|ST_COVERS|ST_EQUALS|ST_EXTENT|ST_ISRING|ST_LENGTH|ST_POINTN|ST_WITHIN|SUBSTRING|TIME_DIFF|TIMESTAMP|TO_BASE32|TO_BASE64|TRANSLATE|UNIX_DATE|COALESCE|DATE_ADD|DATE_SUB|DATETIME|FROM_HEX|GREATEST|JSON_SET|LAST_DAY|LAX_BOOL|SAFE_ADD|ST_UNION|TIME_ADD|TIME_SUB|VAR_SAMP|VARIANCE|BIT_AND|BIT_XOR|CEILING|COLLATE|COUNTIF|EXTRACT|INITCAP|REPLACE|REVERSE|SOUNDEX|ST_AREA|ST_DUMP|TO_JSON|VAR_POP|BIT_OR|CONCAT|FORMAT|IFNULL|IS_INF|IS_NAN|LENGTH|MAX_BY|MIN_BY|NULLIF|REPEAT|SHA256|SHA512|STDDEV|STRING|STRPOS|SUBSTR|TO_HEX|ACOSH|ARRAY|ASCII|ASINH|ATAN2|ATANH|COUNT|FLOOR|INSTR|LEAST|LOG10|LOWER|LTRIM|NTILE|POWER|RIGHT|ROUND|RTRIM|SPLIT|TRUNC|UPPER|ACOS|ASIN|ATAN|CAST|CBRT|CEIL|CORR|COSH|COTH|CSCH|DATE|LEAD|LEFT|LPAD|RAND|RANK|RPAD|SECH|SHA1|SIGN|SINH|SQRT|ST_X|ST_Y|TANH|TIME|TRIM|ABS|AVG|CHR|COS|COT|CSC|DIV|EXP|LAG|LOG|MAX|MD5|MIN|MOD|NET|POW|SEC|SIN|SUM|TAN|IF|LN)\\b(?=\\s*\\())"
+    },
+    {
+      "name": "support.function.namespace.googlesql",
+      "match": "(?i:\\b(?:HLL_COUNT\\.MERGE_PARTIAL|AI\\.GENERATE_EMBEDDING|ML\\.ARIMA_COEFFICIENTS|ML\\.GENERATE_EMBEDDING|ML\\.CONFUSION_MATRIX|ML\\.DETECT_ANOMALIES|NET\\.IPV4_FROM_INT64|ML\\.EXPLAIN_PREDICT|NET\\.IP_FROM_STRING|HLL_COUNT\\.EXTRACT|ML\\.ARIMA_EVALUATE|ML\\.GLOBAL_EXPLAIN|NET\\.IPV4_TO_INT64|NET\\.PUBLIC_SUFFIX|AI\\.GENERATE_TEXT|ML\\.GENERATE_TEXT|NET\\.IP_TO_STRING|HLL_COUNT\\.MERGE|ML\\.FEATURE_INFO|NET\\.IP_NET_MASK|HLL_COUNT\\.INIT|NET\\.REG_DOMAIN|ML\\.RECOMMEND|ML\\.ROC_CURVE|NET\\.IP_TRUNC|AI\\.GENERATE|ML\\.EVALUATE|ML\\.FORECAST|ML\\.PREDICT|ML\\.WEIGHTS|AI\\.SCORE|NET\\.HOST|AI\\.IF)\\b(?=\\s*\\())"
+    },
+    {
+      "name": "storage.type.googlesql",
+      "match": "(?i:\\b(?:BIGDECIMAL|BIGNUMERIC|GEOGRAPHY|TIMESTAMP|DATETIME|INTERVAL|BOOLEAN|DECIMAL|FLOAT32|FLOAT64|INTEGER|NUMERIC|STRING|STRUCT|ARRAY|BYTES|FLOAT|INT64|RANGE|BOOL|DATE|JSON|TIME|INT)\\b)"
+    },
+    {
+      "name": "constant.language.googlesql",
+      "match": "(?i:\\b(?:TRUE|FALSE|NULL|UNKNOWN)\\b)"
+    },
+    {
+      "name": "keyword.control.googlesql",
+      "match": "(?i:\\b(?:CURRENT_TIMESTAMP|CURRENT_DATETIME|CURRENT_DATE|CURRENT_TIME|MATERIALIZED|SAFE_ORDINAL|SAFE_OFFSET|TABLESAMPLE|TRANSACTION|CONNECTION|CONSTRAINT|REFERENCES|EXCEPTION|FOLLOWING|IMMEDIATE|INTERSECT|PARTITION|PRECEDING|PROCEDURE|RECURSIVE|TEMPORARY|UNBOUNDED|CONTINUE|DATABASE|DESCRIBE|DISTINCT|EXTERNAL|FUNCTION|GENERATE|GROUPING|INTERVAL|LANGUAGE|RESTRICT|ROLLBACK|TRUNCATE|BETWEEN|CLUSTER|COLLATE|COLUMNS|DECLARE|DEFAULT|EXECUTE|EXTRACT|FOREIGN|INCLUDE|ITERATE|MATCHED|NATURAL|OPTIONS|PRIMARY|QUALIFY|REPLACE|RESPECT|RETURNS|UNPIVOT|ASSERT|COLUMN|COMMIT|CREATE|DEFINE|DELETE|ELSEIF|EXCEPT|EXISTS|EXPORT|FILTER|GROUPS|HAVING|IGNORE|IMPORT|INSERT|MODULE|OPTION|RENAME|REPEAT|RETURN|REVOKE|ROLLUP|SELECT|SOURCE|STRUCT|SYSTEM|TABLES|UNIQUE|UNNEST|UPDATE|VALUES|WINDOW|WITHIN|BEGIN|BREAK|CROSS|FALSE|FETCH|GRANT|GROUP|INDEX|INNER|LABEL|LEAVE|LIMIT|MERGE|MODEL|NULLS|ORDER|OUTER|PIVOT|RAISE|RANGE|RIGHT|START|TABLE|UNION|USING|WHERE|WHILE|CALL|CASE|CAST|CUBE|DATA|DESC|DROP|ELSE|ENUM|FROM|FULL|INTO|JOIN|LAST|LEFT|LIKE|LOOP|NULL|ONLY|OVER|ROWS|SAFE|SOME|TEMP|THEN|TRUE|TYPE|VIEW|WHEN|WITH|ALL|AND|ANY|ASC|END|FOR|KEY|NEW|NOT|OUT|ROW|SET|SQL|AS|BY|DO|IF|IN|IS|NO|OF|ON|OR|TO)\\b)"
+    },
+    {
+      "name": "constant.numeric.googlesql",
+      "match": "(?i:(?<![\\w])(?:0x[0-9a-f]+|(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:e[+-]?[0-9]+)?)(?![\\w]))"
+    },
+    {
+      "name": "entity.name.function.googlesql",
+      "match": "\\b[A-Za-z_][A-Za-z0-9_]*(?=\\s*\\()"
+    },
+    {
+      "name": "variable.other.member.googlesql",
+      "match": "(?<=\\.)[A-Za-z_][A-Za-z0-9_]*\\b"
+    },
+    {
+      "name": "keyword.operator.googlesql",
+      "match": "=>|\\|\\||!=|<>|<=|>=|<<|>>|[=<>+*\\/%&|^~!-]"
+    },
+    {
+      "name": "punctuation.separator.googlesql",
+      "match": "[,;]"
+    },
+    {
+      "name": "punctuation.section.googlesql",
+      "match": "[()\\[\\]{}]"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-dash.googlesql",
+          "begin": "--",
+          "end": "$"
+        },
+        {
+          "name": "comment.line.number-sign.googlesql",
+          "begin": "#",
+          "end": "$"
+        },
+        {
+          "include": "#comment-block"
+        }
+      ]
+    },
+    "comment-block": {
+      "begin": "/\\*",
+      "captures": {
+        "0": {
+          "name": "punctuation.definition.comment.sql"
+        }
+      },
+      "end": "\\*/",
+      "name": "comment.block",
+      "patterns": [
+        {
+          "include": "#comment-block"
+        }
+      ]
+    },
+    "string_escape": {
+      "match": "\\\\.",
+      "name": "constant.character.escape.sql"
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.triple-single.googlesql",
+          "begin": "(?i:(?<![A-Za-z0-9_])(?:r|b|br|rb)?''')",
+          "end": "'''",
+          "patterns": [
+            {
+              "include": "#string_escape"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.triple-double.googlesql",
+          "begin": "(?i:(?<![A-Za-z0-9_])(?:r|b|br|rb)?\"\"\")",
+          "end": "\"\"\"",
+          "patterns": [
+            {
+              "include": "#string_escape"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.googlesql",
+          "begin": "(?i:(?<![A-Za-z0-9_])(?:r|b|br|rb)?')",
+          "end": "'",
+          "patterns": [
+            {
+              "include": "#string_escape"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.double.googlesql",
+          "begin": "(?i:(?<![A-Za-z0-9_])(?:r|b|br|rb)?\")",
+          "end": "\"",
+          "patterns": [
+            {
+              "include": "#string_escape"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "name": "bigquery-sql-language",
+  "displayName": "BigQuery GoogleSQL Language",
+  "description": "GoogleSQL highlighting, selection highlighting, and offline context-aware syntax and function completion for Visual Studio Code.",
+  "version": "0.2.3",
+  "publisher": "tomohiro-ono-works",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "main": "./src/extension.js",
+  "activationEvents": ["onLanguage:googlesql"],
+  "extensionKind": ["ui"],
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "BigQuery",
+    "GoogleSQL",
+    "SQL",
+    "syntax highlighting",
+    "SQL completion"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "googlesql",
+        "aliases": [
+          "BigQuery GoogleSQL",
+          "GoogleSQL",
+          "BigQuery SQL"
+        ],
+        "extensions": [
+          ".bqsql"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "googlesql",
+        "scopeName": "source.googlesql",
+        "path": "./syntaxes/googlesql.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "BigQuery GoogleSQL Language",
+      "properties": {
+        "bigquerySqlLanguage.referencePalette.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use the screenshot-matched keyword colors and inline backgrounds for GoogleSQL editors. Disable to use the active VSCode theme only."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}

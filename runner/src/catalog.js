@@ -91,11 +91,8 @@ function catalogToYaml(catalog) {
 }
 const {sqlCompletionContext} = require('./sql-scope');
 const {getPathSuggestions}=require('./catalog-paths');
-const {getCreateSuggestions}=require('./syntax-templates');
 function getSuggestions(catalog,source,position,options={}) {
   const tables=Array.isArray(catalog?.tables) ? catalog.tables : [];
-  const syntax=getCreateSuggestions(source,position);
-  if(syntax.length)return syntax;
   const context=sqlCompletionContext(source,position,tables);
   if(context?.kind==='quoted-relation' || context?.kind==='relation-path')return getPathSuggestions(catalog,context,options);
   if (!context) return [];

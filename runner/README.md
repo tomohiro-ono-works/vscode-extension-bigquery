@@ -1,4 +1,13 @@
-# BigQuery SQL Runner v0.3.7
+# BigQuery SQL Runner v0.3.9
+
+## Corrected extension responsibilities
+
+- Runner provides only opt-in BigQuery metadata and CTE completion (project/dataset/table/column), including backtick-triggered path completion. It does not offer CREATE syntax snippets or keywords.
+- BigQuery GoogleSQL Language v0.2.4 owns all SQL syntax keyword/function and CREATE templates.
+- Existing v0.3.7 Explorer UI, Enter-only dataset/table search, checkboxes, descriptions, run/dry-run and CTE/column features remain unchanged.
+- Registration is persisted as VSCode workspaceState under `bigquerySqlRunner.catalog.v1`; the sidebar Export action saves a JSON/YAML file.
+
+---
 
 ## Explorer-style UI restored, inline search retained
 

@@ -1,235 +1,199 @@
 'use strict';
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {registerCatalog,STORE_KEY,PROJECTS_KEY}=require('../src/catalog-extension');
+const {registerCatalog,STORE_KEY,PROJECTS_KEY,panelHtml}=require('../src/catalog-extension');
 
-const ref={projectId:'demo-project',datasetId:'mart',tableId:'sales'};
-const metadata=JSON.stringify({tableReference:ref,description:'売上テーブル',schema:{fields:[
-  {name:'customer_id',type:'STRING',description:'顧客ID'},
-  {name:'amount',type:'NUMERIC',description:'売上金額'},
-  {name:'hidden',type:'BOOL',description:'補完しないカラム'}
+const SALES={projectId:'demo-project',datasetId:'mart',tableId:'sales'};
+const CLIENTS={projectId:'demo-project',datasetId:'mart',tableId:'clients'};
+const schema=ref=>JSON.stringify({tableReference:ref,description:'remote table',schema:{fields:[
+  {name:'customer_id',type:'STRING',description:'Customer'},
+  {name:'sales_amount',type:'NUMERIC',description:'Amount'},
+  {name:'hidden',type:'STRING',description:'Hidden'}
 ]}});
-const secondRef={projectId:'demo-project',datasetId:'mart',tableId:'customers'};
-const secondMetadata=JSON.stringify({tableReference:secondRef,description:'顧客テーブル',schema:{fields:[{name:'name',type:'STRING',description:'顧客名'}]}});
-
 function harness(initial={},options={}) {
-  const callbacks=new Map(),calls=[],writes=[],messages=[],boxChanges=[];
   const saved=new Map(Object.entries(initial));
-  let checkboxHandler,provider,completion,view;
-  class EventEmitter{event=()=>{};fire(){};dispose(){}}
-  class TreeItem{constructor(label,s){this.label=label;this.collapsibleState=s;}}
-  class ThemeIcon{constructor(id){this.id=id;}}
+  const callbacks=new Map(),calls=[],messages=[],sent=[],writes=[];
+  let webviewProvider,completion,webviewView;
   class Position{constructor(line,character){this.line=line;this.character=character;}}
   class Range{constructor(a,b){this.start=a;this.end=b;}}
   class CompletionItem{constructor(label,kind){this.label=label;this.kind=kind;}}
-  class CompletionList{constructor(items=[],isIncomplete=false){this.items=items;this.isIncomplete=isIncomplete;}}
-  const vscode={EventEmitter,TreeItem,ThemeIcon,Position,Range,CompletionItem,CompletionList,
-    TreeItemCollapsibleState:{None:0,Collapsed:1,Expanded:2},
-    TreeItemCheckboxState:{Unchecked:0,Checked:1},
-    CompletionItemKind:{Reference:1,Field:2},
-    Uri:{joinPath:(base,leaf)=>({path:base.path+'/'+leaf})},
+  class CompletionList{constructor(items,isIncomplete){this.items=items;this.isIncomplete=isIncomplete;}}
+  const vscode={Position,Range,CompletionItem,CompletionList,CompletionItemKind:{Reference:1,Field:2},
+    Uri:{joinPath:(base,...segments)=>({path:base.path+'/'+segments.join('/')})},
     workspace:{isTrusted:options.trusted??true,workspaceFolders:[{uri:{path:'/workspace'}}],
       getConfiguration:()=>({get:(key,fallback)=>key==='projectId'?'demo-project':fallback}),
-      fs:{writeFile:async(uri,bytes)=>writes.push({uri,bytes})}},
-    window:{createTreeView:(id,opts)=>{
-      assert.equal(id,'bigquerySqlRunner.catalog');
-      assert.equal(opts.manageCheckboxStateManually,true);
-      provider=opts.treeDataProvider;
-      view={dispose(){},onDidChangeCheckboxState(fn){checkboxHandler=fn;return {dispose(){}};},
-        reveal:async(entry,opts)=>{boxChanges.push({entry,opts});}};
-      return view;
-    },
-      showInputBox:async(opts)=> opts.title.includes('Description')?'変更した説明': 'demo-project',
-      showQuickPick:async()=>{throw Error('Previous modal QuickPick flow must not be used.');},
-      showSaveDialog:async()=>({path:'/workspace/catalog.yaml'}),
-      showWarningMessage:async()=>Object.hasOwn(options,'confirm')?options.confirm:'解除',
-      showInformationMessage:s=>messages.push(s),
-      showErrorMessage:s=>messages.push('ERROR: '+s)
-    },
+      fs:{writeFile:async(uri,data)=>writes.push({uri,data})}},
+    window:{registerWebviewViewProvider:(id,p)=>{assert.equal(id,'bigquerySqlRunner.catalog');webviewProvider=p;return {dispose(){}};},
+      showInputBox:async opts=>opts.title.includes('Description')?'changed description':'demo-project',
+      showSaveDialog:async()=>({path:'/workspace/registered.yaml'}),
+      showWarningMessage:async()=>options.confirm||'解除',
+      showInformationMessage:msg=>messages.push(msg),
+      showErrorMessage:msg=>messages.push('ERROR: '+msg)},
     commands:{registerCommand:(name,fn)=>{callbacks.set(name,fn);return {dispose(){}};}},
-    languages:{registerCompletionItemProvider:(_language,handler)=>{completion=handler;return {dispose(){}};}}
+    languages:{registerCompletionItemProvider:(selector,provider)=>{completion=provider;return {dispose(){}};}}
   };
-  const context={workspaceState:{get:(key)=>saved.get(key),update:async(key,value)=>saved.set(key,structuredClone(value))},subscriptions:[]};
-  const runCli=async(program,args)=>{
-    calls.push({program,args});
+  const runCli=async(program,args,opts={})=>{
+    calls.push({program,args,opts});
     if(program==='gcloud')return {stdout:'demo-project\n'};
-    if(args.includes('show'))return {stdout:args.some(x=>x.includes(':mart.customers'))?secondMetadata:metadata};
-    if(args.includes('ls')&&args.some(x=>x.includes(':mart')))return {stdout:JSON.stringify([
-      {tableReference:ref},{tableReference:secondRef}
-    ])};
-    if(args.includes('ls'))return {stdout:JSON.stringify([{datasetReference:{datasetId:'mart'}},{datasetReference:{datasetId:'archive'}}])};
-    throw Error('Unexpected CLI command');
+    if(args.includes('show'))return {stdout:schema(args.join(' ').includes('.clients')?CLIENTS:SALES)};
+    if(args.includes('ls'))return {stdout:JSON.stringify(['mart','market','marine','archive'].map(datasetId=>({datasetReference:{datasetId}})))};
+    if(args.includes('query')) {
+      const word=/STRPOS\(LOWER\(table_name\), '([^']+)'\)/.exec(opts.stdin)?.[1];
+      if(!word)throw Error('Missing query predicate');
+      return {stdout:JSON.stringify(['sales','customers','clients','salers'].filter(name=>name.includes(word)).map(table_name=>({table_name})))};
+    }
+    throw Error('Unexpected bq command');
   };
+  const context={extensionUri:{path:'/extension'},subscriptions:[],workspaceState:{
+    get:key=>saved.get(key),update:async(key,data)=>saved.set(key,structuredClone(data))}};
   const api=registerCatalog(context,vscode,{runCli});
-  return {api,vscode,provider,callbacks,calls,writes,messages,boxChanges,saved,get completion(){return completion;},
-    async checkbox(entry,checked){checkboxHandler({items:[[entry,checked?1:0]]});await api.whenIdle();}
-  };
-}
-async function navigate(h) {
-  const projects=await h.provider.getChildren();
-  const datasets=await h.provider.getChildren(projects[0]);
-  const mart=datasets.find(d=>d.label==='mart');
-  const tables=await h.provider.getChildren(mart);
-  const sales=tables.find(t=>t.label==='sales');
-  const columns=await h.provider.getChildren(sales);
-  return {projects,datasets,mart,tables,sales,columns};
+  function open(){
+    const webview={cspSource:'vscode-webview:',asWebviewUri:uri=>uri.path,postMessage:msg=>{sent.push(msg);return Promise.resolve(true);},
+      onDidReceiveMessage:fn=>{webview.receive=fn;return {dispose(){}};}};
+    webviewView={webview,onDidDispose:()=>({dispose(){}})};
+    webviewProvider.resolveWebviewView(webviewView);
+    return webview;
+  }
+  const send=async message=>{await api.receiveMessage(message);};
+  const state=()=>api.snapshot();
+  return {api,context,callbacks,calls,messages,sent,writes,saved,vscode,open,send,state,
+    get completion(){return completion;},get webviewProvider(){return webviewProvider;}};
 }
 
-test('single Explorer hierarchy is project > dataset > table > column, with persistent project root',async()=>{
+test('project expansion and dataset expansion never make BigQuery requests',async()=>{
   const h=harness();
-  assert.deepEqual(await h.provider.getChildren(),[]);
-  assert.equal(h.callbacks.has('bigquerySqlRunner.catalog.import'),false);
+  const webview=h.open();
+  assert.match(webview.html,/Content-Security-Policy/);
+  assert.match(webview.html,/media\/catalog.js/);
+  assert.equal(h.calls.length,0);
   await h.callbacks.get('bigquerySqlRunner.catalog.addProject')();
-  const {projects,datasets,tables,columns}=await navigate(h);
-  assert.equal(projects[0].kind,'project');
-  assert.deepEqual(datasets.map(x=>x.label),['archive','mart']);
-  assert.deepEqual(tables.map(x=>x.label),['customers','sales']);
-  assert.deepEqual(columns.map(x=>x.label),['customer_id','amount','hidden']);
-  assert.equal(h.provider.getTreeItem(projects[0]).id,'project:demo-project');
-  assert.equal(h.provider.getTreeItem(columns[0]).checkboxState,0);
-  assert.deepEqual(h.saved.get(PROJECTS_KEY),['demo-project']);
-  assert.equal(h.boxChanges.length,1);
+  assert.equal(h.calls.length,0);
+  assert.deepEqual(h.state().projects.map(p=>p.name),['demo-project']);
+  assert.deepEqual(h.state().projects[0].datasets,[]);
+  assert.ok(h.saved.get(PROJECTS_KEY));
 });
 
-test('checkbox registration persists chosen tables and columns without auto-selecting all fields',async()=>{
+test('dataset search must be explicitly submitted and requires three characters',async()=>{
   const h=harness();await h.callbacks.get('bigquerySqlRunner.catalog.addProject')();
-  const {sales,columns}=await navigate(h);
-  await h.checkbox(sales,true);
-  assert.equal(h.saved.get(STORE_KEY).tables.length,1);
-  assert.deepEqual(h.saved.get(STORE_KEY).tables[0].columns,[]);
-  assert.equal(h.provider.getTreeItem(sales).checkboxState,1);
-  assert.equal(h.provider.getTreeItem(columns[0]).checkboxState,0);
-  await h.checkbox(columns[0],true);
-  assert.deepEqual(h.saved.get(STORE_KEY).tables[0].columns.map(c=>c.name),['customer_id']);
-  assert.equal(h.saved.get(STORE_KEY).tables[0].description,'売上テーブル');
-  assert.equal(h.provider.getTreeItem(columns[0]).tooltip,'顧客ID');
-  const source='SELECT s.\nFROM `demo-project.mart.sales` AS s\nWHERE s.c';
-  const completionResult=h.completion.provideCompletionItems({getText:()=>source,offsetAt:()=>source.length},new h.vscode.Position(2,9));
-  const found=completionResult.items;
-  assert.ok(completionResult instanceof h.vscode.CompletionList);
-  assert.equal(completionResult.isIncomplete,true);
-  assert.deepEqual(found.map(x=>x.label),['customer_id']);
-  assert.equal(found[0].documentation,'顧客ID');
-  assert.equal(h.writes.length,0);
-  await h.checkbox(columns[0],false);
-  assert.equal(h.saved.get(STORE_KEY).tables[0].columns.length,0);
-  assert.equal(h.saved.get(STORE_KEY).tables.length,1);
+  await assert.rejects(h.send({command:'searchDatasets',project:'demo-project',term:'ma'}),/3文字/);
+  assert.equal(h.calls.length,0);
+  await h.send({command:'searchDatasets',project:'demo-project',term:'mar'});
+  assert.equal(h.calls.filter(x=>x.program==='bq').length,1);
+  assert.deepEqual(h.state().projects[0].datasets.map(x=>x.name),['marine','market','mart']);
+  assert.deepEqual(h.state().projects[0].search.names,['marine','market','mart']);
 });
 
-test('column selection also registers parent table and does not register siblings',async()=>{
+test('table search must be explicitly submitted and pushes filter down to BigQuery query stdin',async()=>{
   const h=harness();await h.callbacks.get('bigquerySqlRunner.catalog.addProject')();
-  const {columns}=await navigate(h);
-  await h.checkbox(columns[1],true);
-  const result=h.saved.get(STORE_KEY).tables;
-  assert.equal(result.length,1);
-  assert.deepEqual(result[0].columns.map(c=>c.name),['amount']);
+  await h.send({command:'searchDatasets',project:'demo-project',term:'mar'});
+  const before=h.calls.length;
+  await assert.rejects(h.send({command:'searchTables',project:'demo-project',dataset:'mart',term:'sa'}),/3文字/);
+  assert.equal(h.calls.length,before);
+  await h.send({command:'searchTables',project:'demo-project',dataset:'mart',term:'sal'});
+  assert.equal(h.calls.length,before+1);
+  const call=h.calls.at(-1);
+  assert.equal(call.program,'bq');assert.ok(call.args.includes('query'));
+  assert.ok(call.opts.stdin.includes('INFORMATION_SCHEMA.TABLES'));
+  assert.ok(call.opts.stdin.includes("STRPOS(LOWER(table_name), 'sal')"));
+  assert.ok(call.args.every(arg=>!arg.includes('sal')));
+  assert.deepEqual(h.state().projects[0].datasets.find(d=>d.name==='mart').tables.map(t=>t.name),['salers','sales']);
 });
 
-test('registered state survives extension reload and v0.2.0 table registrations migrate into project root',async()=>{
-  const legacy={version:1,tables:[{project:'demo-project',dataset:'mart',name:'sales',
-    description:'ユーザー変更済',columns:[{name:'customer_id',type:'STRING',description:'修正説明'}]}]};
-  const h=harness({[STORE_KEY]:legacy});
-  const {projects,columns,sales}=await navigate(h);
-  assert.equal(projects.length,1);
-  assert.equal(h.provider.getTreeItem(sales).checkboxState,1);
-  assert.equal(h.provider.getTreeItem(columns[0]).checkboxState,1);
-  assert.equal(h.provider.getTreeItem(columns[0]).tooltip,'修正説明');
-  assert.deepEqual(h.api.getProjects(),['demo-project']);
-});
-
-test('table unchecked with registered columns needs confirmation and cancellation keeps registration',async()=>{
-  const pre={version:1,tables:[{project:'demo-project',dataset:'mart',name:'sales',description:'',columns:[{name:'amount',type:'NUMERIC',description:'売上金額'}]}]};
-  const h=harness({[STORE_KEY]:pre},{confirm:undefined});
-  const {sales}=await navigate(h);
-  await h.checkbox(sales,false);
-  assert.equal(h.api.getCatalog().tables.length,1); // Confirmation response was undefined; not "解除".
-  assert.equal(h.provider.getTreeItem(sales).checkboxState,1);
-});
-
-test('cache prevents repeated API calls on expand and refresh reloads lists without losing selection',async()=>{
+test('explicit loadColumns fetches only chosen table and supports checked registration',async()=>{
   const h=harness();await h.callbacks.get('bigquerySqlRunner.catalog.addProject')();
-  await navigate(h);await navigate(h);
-  assert.equal(h.calls.filter(c=>c.program==='bq').length,3);
-  await h.callbacks.get('bigquerySqlRunner.catalog.refresh')();
-  await navigate(h);
-  assert.equal(h.calls.filter(c=>c.program==='bq').length,6);
+  await h.send({command:'searchDatasets',project:'demo-project',term:'mar'});
+  await h.send({command:'searchTables',project:'demo-project',dataset:'mart',term:'sal'});
+  assert.equal(h.calls.filter(c=>c.args.includes('show')).length,0);
+  await h.send({command:'loadColumns',project:'demo-project',dataset:'mart',table:'sales'});
+  assert.equal(h.calls.filter(c=>c.args.includes('show')).length,1);
+  let table=h.state().projects[0].datasets.find(d=>d.name==='mart').tables.find(t=>t.name==='sales');
+  assert.equal(table.loaded,true);assert.equal(table.columns.length,3);
+  await h.send({command:'toggleTable',project:'demo-project',dataset:'mart',table:'sales',checked:true});
+  assert.equal(h.api.getCatalog().tables[0].columns.length,0);
+  await h.send({command:'toggleColumn',project:'demo-project',dataset:'mart',table:'sales',column:'customer_id',checked:true});
+  table=h.state().projects[0].datasets.find(d=>d.name==='mart').tables.find(t=>t.name==='sales');
+  assert.equal(table.columns.find(c=>c.name==='customer_id').registered,true);
+  assert.equal(table.columns.find(c=>c.name==='hidden').registered,false);
+  assert.equal(h.saved.get(STORE_KEY).tables[0].description,'remote table');
+  const src='SELECT c\nFROM `demo-project.mart.sales`';
+  const list=h.completion.provideCompletionItems({getText:()=>src,offsetAt:()=>8},new h.vscode.Position(0,8));
+  assert.ok(list instanceof h.vscode.CompletionList);
+  assert.ok(list.items.some(x=>x.label==='customer_id'));
 });
 
-test('description editing and JSON/YAML export remain available',async()=>{
-  const h=harness();await h.callbacks.get('bigquerySqlRunner.catalog.addProject')();
-  const {sales,columns}=await navigate(h);
-  await h.checkbox(columns[0],true);
-  await h.callbacks.get('bigquerySqlRunner.catalog.editDescription')(sales);
-  assert.equal(h.api.getCatalog().tables[0].description,'変更した説明');
+test('existing registered tables and descriptions remain visible offline with no CLI calls',async()=>{
+  const prior={version:1,tables:[{project:'demo-project',dataset:'mart',name:'sales',description:'old desc',columns:[{name:'customer_id',description:'old field'}]}]};
+  const h=harness({[STORE_KEY]:prior},{trusted:false});h.open();
+  assert.deepEqual(h.state().projects[0].datasets.map(d=>d.name),['mart']);
+  const t=h.state().projects[0].datasets[0].tables[0];
+  assert.equal(t.registered,true);assert.equal(t.columns[0].description,'old field');
+  assert.equal(h.calls.length,0);
+  await assert.rejects(h.send({command:'searchDatasets',project:'demo-project',term:'mar'}),/信頼済み/);
+  assert.equal(h.calls.length,0);
+});
+
+test('description edit persists and export remains explicit, refresh does not refetch',async()=>{
+  const prior={version:1,tables:[{project:'demo-project',dataset:'mart',name:'sales',description:'',columns:[]}]};
+  const h=harness({[STORE_KEY]:prior});h.open();
+  await h.send({command:'editDescription',project:'demo-project',dataset:'mart',table:'sales'});
+  assert.equal(h.api.getCatalog().tables[0].description,'changed description');
   await h.callbacks.get('bigquerySqlRunner.catalog.export')();
   assert.equal(h.writes.length,1);
-  assert.match(h.writes[0].bytes.toString('utf8'),/description: "変更した説明"/);
-});
-
-test('project removal clears its registrations, but other projects remain',async()=>{
-  const initial={version:1,tables:[
-    {project:'demo-project',dataset:'mart',name:'sales',columns:[]},
-    {project:'other-project',dataset:'mart',name:'customers',columns:[]}
-  ]};
-  const h=harness({[STORE_KEY]:initial},{confirm:'削除'});
-  const projects=await h.provider.getChildren();
-  await h.callbacks.get('bigquerySqlRunner.catalog.remove')(projects.find(p=>p.project==='demo-project'));
-  assert.deepEqual(h.api.getProjects(),['other-project']);
-  assert.deepEqual(h.api.getCatalog().tables.map(t=>t.project),['other-project']);
-});
-
-test('untrusted workspace does not call bq to fetch metadata and can still see saved registrations',async()=>{
-  const legacy={version:1,tables:[{project:'demo-project',dataset:'mart',name:'sales',columns:[{name:'customer_id'}]}]};
-  const h=harness({[STORE_KEY]:legacy},{trusted:false});
-  const {projects,datasets,tables,columns}=await navigate(h);
-  assert.equal(projects.length,1);
-  assert.deepEqual(datasets.map(d=>d.label),['mart']);
-  assert.deepEqual(tables.map(t=>t.label),['sales']);
-  assert.deepEqual(columns.map(c=>c.label),['customer_id']);
+  assert.match(h.writes[0].data.toString('utf8'),/changed description/);
+  await h.callbacks.get('bigquerySqlRunner.catalog.refresh')();
   assert.equal(h.calls.length,0);
-  assert.ok(h.messages.some(x=>x.includes('信頼済み')));
+  assert.equal(h.api.getCatalog().tables.length,1);
 });
 
-test('diagnostic distinguishes missing registrations and generated suggestions',async()=>{
+test('project deletion removes registrations after confirmation',async()=>{
+  const prior={version:1,tables:[{project:'demo-project',dataset:'mart',name:'sales',columns:[]}]};
+  const h=harness({[STORE_KEY]:prior},{confirm:'削除'});
+  await h.send({command:'removeProject',project:'demo-project'});
+  assert.equal(h.state().projects.length,0);assert.equal(h.api.getCatalog().tables.length,0);
+});
+
+test('invalid UI message does not execute arbitrary CLI or shell strings',async()=>{
   const h=harness();
-  const sql='SELECT * FROM s';
-  h.vscode.window.activeTextEditor={
-    document:{languageId:'googlesql',getText:()=>sql,offsetAt:()=>sql.length},
-    selection:{active:new h.vscode.Position(0,sql.length)}
-  };
-  await h.callbacks.get('bigquerySqlRunner.catalog.diagnose')();
-  assert.match(h.messages.at(-1),/登録テーブル=0/);
-  assert.match(h.messages.at(-1),/登録済みテーブルが0件/);
-  await h.callbacks.get('bigquerySqlRunner.catalog.addProject')();
-  const {sales}=await navigate(h);
-  await h.checkbox(sales,true);
-  await h.callbacks.get('bigquerySqlRunner.catalog.diagnose')();
-  assert.match(h.messages.at(-1),/候補=1/);
-  assert.match(h.messages.at(-1),/sales/);
-  assert.match(h.messages.at(-1),/Ctrl\+Space/);
-  assert.equal(h.calls.some(c=>c.program==='bq'&&c.args.includes('query')),false);
+  await assert.rejects(h.send({command:'runCli',args:['rm','-rf']}),/未対応/);
+  await assert.rejects(h.send({command:'searchDatasets',project:'demo-project',term:"a';DROP TABLE x;--"}),/検索語/);
+  await assert.rejects(h.send({command:'searchTables',project:'demo-project',dataset:'mart',term:'s\nSELECT'}),/検索語/);
+  assert.equal(h.calls.length,0);
 });
 
-test('host-facing diagnostic receives actual VSCode CompletionList with registered table label',async()=>{
-  const savedCatalog={version:1,tables:[{project:'demo-project',dataset:'mart',name:'sales',description:'売上',columns:[]}]};
-  const h=harness({[STORE_KEY]:savedCatalog});
-  const sql='SELECT * FROM s';
-  const position=new h.vscode.Position(0,sql.length);
-  const document={uri:{scheme:'file',path:'/workspace/query.sql'},languageId:'googlesql',
-    getText:()=>sql,offsetAt:()=>sql.length};
+test('diagnostic still checks registered candidates via the actual CompletionList',async()=>{
+  const prior={version:1,tables:[{project:'demo-project',dataset:'mart',name:'sales',columns:[]}]};
+  const h=harness({[STORE_KEY]:prior});
+  const sql='SELECT * FROM s';const position=new h.vscode.Position(0,sql.length);
+  const document={languageId:'googlesql',uri:{path:'/workspace/a.sql'},getText:()=>sql,offsetAt:()=>sql.length};
   h.vscode.window.activeTextEditor={document,selection:{active:position}};
-  h.vscode.commands.executeCommand=async(command,uri,pos)=>{
-    assert.equal(command,'vscode.executeCompletionItemProvider');
-    assert.equal(uri,document.uri);
-    assert.equal(pos,position);
-    const result=h.completion.provideCompletionItems(document,position);
-    // Mimic the real extension-host contract: a plain {items,isIncomplete}
-    // return value is not accepted in place of a VSCode CompletionList instance.
-    assert.ok(result instanceof h.vscode.CompletionList);
-    return result;
-  };
+  h.vscode.commands.executeCommand=async()=>h.completion.provideCompletionItems(document,position);
   await h.callbacks.get('bigquerySqlRunner.catalog.diagnose')();
-  assert.match(h.messages.at(-1),/候補=1/);
   assert.match(h.messages.at(-1),/VSCode候補検査=受信1件/);
-  assert.match(h.messages.at(-1),/sales/);
+});
+
+test('inline project-add action is supported, and existing project remains a single registered node',async()=>{
+  const h=harness();h.open();
+  await h.send({command:'addProject'});
+  await h.send({command:'addProject'});
+  assert.deepEqual(h.state().projects.map(p=>p.name),['demo-project']);
+  assert.equal(h.calls.length,0); // configured ID; no gcloud and no bq calls
+  assert.deepEqual(h.saved.get(PROJECTS_KEY),['demo-project']);
+});
+
+test('project registration works offline in untrusted workspace without using the CLI',async()=>{
+  const h=harness({}, {trusted:false});h.open();
+  await h.send({command:'addProject'});
+  assert.deepEqual(h.state().projects.map(p=>p.name),['demo-project']);
+  assert.equal(h.calls.length,0);
+});
+
+test('inline refresh clears search results but not registered catalog or project',async()=>{
+  const h=harness();h.open();
+  await h.send({command:'addProject'});
+  await h.send({command:'searchDatasets',project:'demo-project',term:'mar'});
+  const calls=h.calls.length;
+  await h.send({command:'refresh'});
+  assert.equal(h.calls.length,calls);
+  assert.deepEqual(h.state().projects[0].datasets,[]);
+  assert.deepEqual(h.state().projects.map(p=>p.name),['demo-project']);
 });

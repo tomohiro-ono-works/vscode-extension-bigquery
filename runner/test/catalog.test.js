@@ -35,7 +35,7 @@ test('column suggestions require a recognized table alias and include descriptio
  const noAlias='SELECT x.\nFROM `demo-project.mart.sales` AS s';
  assert.deepEqual(c.getSuggestions(catalog,noAlias,noAlias.indexOf('x.')+2),[]);
  const unqualified='SELECT cu FROM `demo-project.mart.sales` AS s';
- assert.deepEqual(c.getSuggestions(catalog,unqualified,unqualified.length),[]);
+ assert.deepEqual(c.getSuggestions(catalog,unqualified,unqualified.indexOf('cu')+2).map(x=>x.label),['customer_id']);
 });
 test('untrusted persisted catalog entries cannot insert arbitrary invalid identifiers',()=>{
  const cleaned=c.normalizeCatalog({tables:[{...base,columns:[{name:'good',description:'okay'},{name:'x; DROP TABLE users',description:'bad'}]},{project:'fake;cmd',dataset:'oops',name:'wrong'}]});

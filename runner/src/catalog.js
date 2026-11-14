@@ -95,9 +95,34 @@ function getSuggestions(catalog,source,position) {
   const context=sqlCompletionContext(source,position,tables);
   if (!context) return [];
   if (context.kind==='table') {
-    return tables.filter(t=>t.name.toLowerCase().startsWith(context.typed.toLowerCase()))
+    const physical=tables.filter(t=>t.name.toLowerCase().startsWith(context.typed.toLowerCase()))
       .map(t=>({label:t.name,kind:'table',insertText:'`'+tableKey(t)+'`',
         description:t.description,type:tableKey(t),replace:context.typed.length}));
+    const ctes=(context.ctes || []).filter(t=>t.name.toLowerCase().startsWith(context.typed.toLowerCase()))
+      .map(t=>({label:t.name,kind:'cte',insertText:t.name,description:'',type:'CTE',replace:context.typed.length}));
+    return [...ctes,...physical];
+  }
+  if (context.kind==='unqualified-column') {
+    const byName=new Map();
+    for (const [alias,table] of context.sources) {
+      for(const c of table.columns) {
+        if(!c.name.toLowerCase().startsWith(context.typed.toLowerCase())) continue;
+        const key=c.name.toLowerCase();
+        if(!byName.has(key)) byName.set(key,[]);
+        byName.get(key).push({alias,table,column:c});
+      }
+    }
+    return [...byName.values()].flatMap(matches => {
+      // Ambiguous unqualified columns would produce invalid SQL: suggest
+      // explicit alias.column instead, once for each source.
+      if(matches.length>1) return matches.map(({alias,column:c})=>({
+        label:`${alias}.${c.name}`,kind:'column',insertText:`${alias}.${c.name}`,filterText:c.name,
+        description:c.description,type:c.type,replace:context.typed.length
+      }));
+      const c=matches[0].column;
+      return [{label:c.name,kind:'column',insertText:c.name,
+        description:c.description,type:c.type,replace:context.typed.length}];
+    }).slice(0,250);
   }
   if (!context.table) return [];
   return context.table.columns.filter(c=>c.name.toLowerCase().startsWith(context.typed.toLowerCase()))

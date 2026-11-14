@@ -1,8 +1,8 @@
 'use strict';
 
-// A structural scanner for table/column completion. It never executes SQL.
-// Unlike single-line regex matching, it tracks parentheses, statement boundaries,
-// and SELECT blocks so an alias in one CTE cannot leak into a sibling CTE.
+// Offline structural SQL analysis for completion. No SQL is executed and no
+// credentials, network calls, or third-party parsers are involved. It keeps
+// SELECT/CTE scopes separate, including forward references to a later FROM.
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const RELATION_START = new Set(['FROM','JOIN','UPDATE','INTO']);
 const ALIAS_STOP = new Set([
@@ -12,6 +12,8 @@ const ALIAS_STOP = new Set([
   'OR','WHEN','THEN','ELSE','END','SET','RETURNING','OPTIONS'
 ]);
 const SEGMENT_BREAK = new Set(['UNION','INTERSECT','EXCEPT',';']);
+const COLUMN_CLAUSES = new Set(['SELECT','WHERE','ON','HAVING','QUALIFY','GROUP BY','ORDER BY']);
+const CLAUSE_WORDS = new Set(['SELECT','FROM','JOIN','WHERE','ON','HAVING','QUALIFY','GROUP','ORDER','LIMIT','WINDOW','INTO','UPDATE']);
 
 function lexSql(source) {
   const text=String(source ?? '');
@@ -47,9 +49,9 @@ function lexSql(source) {
         else {value+=text[i];i++;}
       }
       push('identifier',value,start,i);
+      excluded.push([start,i]); // Never complete inside a quoted identifier.
       continue;
     }
-    // Ignore single, double, triple and raw/bytes-prefixed string literals.
     let prefix=0;
     if (/[rRbB]/.test(text[i])) {
       if (/[rRbB]/.test(text[i+1]||'') && /['"]/.test(text[i+2]||'')) prefix=2;
@@ -84,7 +86,7 @@ function lexSql(source) {
       if(stack.length>1) frames[stack.pop()].to=i;
       i++;continue;
     }
-    if ('.;,'.includes(text[i])) push('punct',text[i],i,i+1);
+    if ('.;,*'.includes(text[i])) push('punct',text[i],i,i+1);
     i++;
   }
   return {tokens,frames,excluded};
@@ -97,7 +99,10 @@ function frameAt(frames,pos) {
   }
   return best.id;
 }
-
+function ancestorOf(frames,ancestor,child) {
+  for(let id=child;id!==null;id=frames[id].parent) if(id===ancestor) return true;
+  return false;
+}
 function activeQueryTokens(parsed,position) {
   let id=frameAt(parsed.frames,position);
   while(id!==null) {
@@ -107,7 +112,6 @@ function activeQueryTokens(parsed,position) {
     const lastSelect=selects.at(-1);
     if(lastSelect) {
       let start=lastSelect.start;
-      // Start after last set operator or semicolon preceding the current SELECT.
       const breaks=before.filter(t=>SEGMENT_BREAK.has(t.value.toUpperCase()));
       if (breaks.at(-1)?.start>start) start=breaks.at(-1).end;
       const nextBreak=frameTokens.find(t=>t.start>=start && t.start>=position
@@ -115,8 +119,6 @@ function activeQueryTokens(parsed,position) {
       const end=nextBreak?.start ?? parsed.frames[id].to;
       return frameTokens.filter(t=>t.start>=start && t.start<end);
     }
-    // UPDATE or INSERT INTO may have no SELECT. Do not mix parent CTE aliases
-    // when we're inside a child SELECT query with a different frame.
     const relation=before.find(t=>RELATION_START.has(t.value.toUpperCase()));
     if(relation && id===0) return frameTokens;
     id=parsed.frames[id].parent;
@@ -129,8 +131,6 @@ function readRelation(tokens,offset) {
   if(!first || !['word','identifier'].includes(first.kind)) return null;
   let name=first.value;
   let j=offset+1;
-  // Dotted unquoted references: project.dataset.table (hyphenated projects
-  // should be backtick-quoted to avoid treating subtraction as identifier).
   while(tokens[j]?.value==='.' && ['word','identifier'].includes(tokens[j+1]?.kind)) {
     name+='.'+tokens[j+1].value;
     j+=2;
@@ -144,46 +144,185 @@ function readRelation(tokens,offset) {
   return {name,alias,nextIndex:j};
 }
 
-function relationBindings(tokens,tables) {
+// Parse WITH cte AS (...), cte2 AS (...) into explicit CTE definitions.
+// Child body parentheses are tracked as frames, not text-search delimiters.
+function collectCtes(parsed) {
+  const children=new Map();
+  for(const f of parsed.frames.slice(1)) children.set(`${f.parent}:${f.from-1}`,f.id);
+  const result=[];
+  for(const frame of parsed.frames) {
+    const ts=parsed.tokens.filter(t=>t.frame===frame.id);
+    for(let i=0;i<ts.length;i++) {
+      if(ts[i].kind!=='word' || ts[i].value.toUpperCase()!=='WITH') continue;
+      let j=i+1;
+      const recursive=ts[j]?.value.toUpperCase()==='RECURSIVE';
+      if(recursive) j++;
+      let count=0;
+      while(count++<100) {
+        const n=ts[j];
+        if(!n || !['word','identifier'].includes(n.kind) || !IDENT.test(n.value)) break;
+        const name=n.value;
+        j++;
+        let declared=[];
+        if(ts[j]?.value==='(') {
+          const cols=children.get(`${frame.id}:${ts[j].start}`);
+          if(cols!==undefined) {
+            declared=parsed.tokens.filter(t=>t.frame===cols && t.kind==='word').map(t=>t.value);
+          }
+          j++;
+        }
+        if(ts[j]?.value.toUpperCase()!=='AS') break;
+        j++;
+        if(ts[j]?.value!=='(') break;
+        const bodyFrame=children.get(`${frame.id}:${ts[j].start}`);
+        if(bodyFrame===undefined) break;
+        result.push({name,parentFrame:frame.id,bodyFrame,start:n.start,recursive,declared});
+        j++;
+        if(ts[j]?.value!==',') break;
+        j++;
+      }
+    }
+  }
+  return result;
+}
+
+function visibleCtes(parsed,definitions,frameId,position) {
+  const visible=new Map();
+  const chain=[];
+  for(let id=frameId;id!==null;id=parsed.frames[id].parent) chain.unshift(id);
+  for(const scope of chain) {
+    for(const def of definitions) {
+      if(def.parentFrame!==scope || def.start>position) continue;
+      const within=ancestorOf(parsed.frames,def.bodyFrame,frameId);
+      if(within && !def.recursive) continue; // Non-recursive CTE cannot see itself.
+      visible.set(def.name.toLowerCase(),def);
+    }
+  }
+  return visible;
+}
+function resolveCatalogTable(name,tables) {
+  const lower=name.toLowerCase();
+  const matches=tables.filter(t=>
+    `${t.project}.${t.dataset}.${t.name}`.toLowerCase()===lower ||
+    `${t.dataset}.${t.name}`.toLowerCase()===lower ||
+    t.name.toLowerCase()===lower);
+  return matches.length===1 ? matches[0] : null;
+}
+
+function queryBindings(tokens,tables,ctes=new Map(),getCte=()=>null) {
   const aliases=new Map();
-  const registered=Array.isArray(tables)?tables:[];
   for (let i=0;i<tokens.length;i++) {
     const token=tokens[i];
     if(token.kind!=='word' || !RELATION_START.has(token.value.toUpperCase())) continue;
     const ref=readRelation(tokens,i+1);
     if(!ref) continue;
-    const name=ref.name.toLowerCase();
-    const matches=registered.filter(t=>
-      `${t.project}.${t.dataset}.${t.name}`.toLowerCase()===name ||
-      `${t.dataset}.${t.name}`.toLowerCase()===name ||
-      t.name.toLowerCase()===name);
-    // Ambiguous short names should never resolve to an arbitrary table.
-    if(matches.length===1) {
-      const resolved=ref.alias || matches[0].name;
-      const key=resolved.toLowerCase();
-      aliases.set(key,aliases.has(key)?null:matches[0]);
-    } else {
-      // Explicitly shadow a catalog alias with a CTE or unregistered table.
-      const shadow=(ref.alias || ref.name.split('.').at(-1)).toLowerCase();
-      aliases.set(shadow,null);
-    }
+    const lower=ref.name.toLowerCase();
+    const cteDef=ctes.get(lower);
+    const table=cteDef ? getCte(cteDef) : resolveCatalogTable(ref.name,tables);
+    const alias=(ref.alias || ref.name.split('.').at(-1)).toLowerCase();
+    aliases.set(alias,aliases.has(alias)?null:table);
     i=ref.nextIndex-1;
   }
   return aliases;
 }
+function relationBindings(tokens,tables) {return queryBindings(tokens,tables);}
 
+function dedupeColumns(columns) {
+  const seen=new Set();
+  return columns.filter(c=>{
+    const k=c.name.toLowerCase();
+    if(!IDENT.test(c.name) || seen.has(k)) return false;
+    seen.add(k);return true;
+  }).slice(0,500);
+}
+function getProjection(parsed,def,tables,definitions,memo,computing) {
+  const frame=parsed.frames[def.bodyFrame];
+  const tokens=parsed.tokens.filter(t=>t.frame===def.bodyFrame);
+  const select=tokens.findIndex(t=>t.value.toUpperCase()==='SELECT');
+  if(select<0) return [];
+  const from=tokens.findIndex((t,i)=>i>select && t.value.toUpperCase()==='FROM');
+  const stop=from<0 ? tokens.findIndex((t,i)=>i>select && ['WHERE','UNION','INTERSECT','EXCEPT',';'].includes(t.value.toUpperCase())) : from;
+  const end=stop<0 ? tokens.length : stop;
+  const portions=[];
+  let current=[];
+  for(const token of tokens.slice(select+1,end)) {
+    if(token.value===',') {if(current.length) portions.push(current);current=[];}
+    else current.push(token);
+  }
+  if(current.length) portions.push(current);
+  const vis=visibleCtes(parsed,definitions,def.bodyFrame,frame.to);
+  const b=queryBindings(activeQueryTokens(parsed,frame.to),tables,vis,other=>getCteModel(parsed,other,tables,definitions,memo,computing));
+  const columns=[];
+  for(const part of portions) {
+    const as=part.findIndex(t=>t.value.toUpperCase()==='AS');
+    const explicit=as>=0 ? part[as+1]?.value : null;
+    const first=part[0];
+    const last=part.at(-1);
+    // SELECT *, alias.* - expand only registered or inferred source columns.
+    if(first?.value==='*' && part.length===1) {
+      for(const table of b.values()) if(table) columns.push(...table.columns);
+      continue;
+    }
+    if(part.length===3 && part[1].value==='.' && part[2].value==='*') {
+      const table=b.get(first.value.toLowerCase());
+      if(table) columns.push(...table.columns);
+      continue;
+    }
+    const sourceName=part.length===3 && part[1].value==='.' ? part[2].value
+      : part.length===1 && first.kind==='word' ? first.value : null;
+    const sources=sourceName ? [...b.values()].filter(x=>x?.columns.some(c=>c.name.toLowerCase()===sourceName.toLowerCase())) : [];
+    const srcField=sources.length===1 ? sources[0].columns.find(c=>c.name.toLowerCase()===sourceName.toLowerCase()) : null;
+    const name=explicit || sourceName;
+    if(name && IDENT.test(name)) columns.push({name,type:srcField?.type || '',description:srcField?.description || ''});
+    // Expression without an AS alias is intentionally not guessed.
+    void last;
+  }
+  if(def.declared.length) {
+    const inferred=dedupeColumns(columns);
+    return dedupeColumns(def.declared.map((name,i)=>({name,type:inferred[i]?.type || '',description:inferred[i]?.description || ''})));
+  }
+  return dedupeColumns(columns);
+}
+function getCteModel(parsed,def,tables,definitions,memo,computing) {
+  if(memo.has(def)) return memo.get(def);
+  if(computing.has(def)) return null;
+  computing.add(def);
+  const model={name:def.name,project:'',dataset:'',description:'CTE',columns:getProjection(parsed,def,tables,definitions,memo,computing)};
+  computing.delete(def);
+  memo.set(def,model);
+  return model;
+}
+
+function activeClause(tokens,position) {
+  let clause=null;
+  const before=tokens.filter(t=>t.start<position);
+  for(let i=0;i<before.length;i++) {
+    const word=before[i].value.toUpperCase();
+    if(CLAUSE_WORDS.has(word)) {
+      if((word==='GROUP'||word==='ORDER') && before[i+1]?.value.toUpperCase()==='BY') {
+        clause=word+' BY';i++;
+      } else clause=word;
+    }
+  }
+  return clause;
+}
 function sqlCompletionContext(source,position,tables) {
   const src=String(source??'');
   const before=src.slice(0,position);
   const parsed=lexSql(src);
   if(parsed.excluded.some(([from,to])=>from<position && position<=to)) return null;
+  const definitions=collectCtes(parsed);
+  const memo=new Map();
+  const computing=new Set();
+  const scope=activeQueryTokens(parsed,position);
+  const frame=frameAt(parsed.frames,position);
+  const ctes=visibleCtes(parsed,definitions,frame,position);
+  const bindings=()=>queryBindings(scope,tables,ctes,d=>getCteModel(parsed,d,tables,definitions,memo,computing));
   const qualified=/\b([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z0-9_]*)$/.exec(before);
   if(qualified) {
-    const scope=activeQueryTokens(parsed,position);
-    const target=relationBindings(scope,tables).get(qualified[1].toLowerCase());
-    return {kind:'column',typed:qualified[2],table:target||null};
+    const table=bindings().get(qualified[1].toLowerCase());
+    return {kind:'column',typed:qualified[2],table:table||null};
   }
-  // Recognize FROM/JOIN followed by any whitespace, including newlines/tabs.
   const typedMatch=/([A-Za-z_][A-Za-z0-9_]*)$/.exec(before);
   const typed=typedMatch?.[1]||'';
   const prefixEnd=position-typed.length;
@@ -192,9 +331,15 @@ function sqlCompletionContext(source,position,tables) {
   const following=before.slice(last?.end||0,prefixEnd);
   if(last?.kind==='word' && RELATION_START.has(last.value.toUpperCase())
     && /^\s*$/.test(following) && (typed.length>0 || following.length>0)) {
-    return {kind:'table',typed};
+    return {kind:'table',typed,ctes:[...ctes.values()].map(d=>({name:d.name,description:'CTE'}))};
   }
-  return null;
+  const clause=activeClause(scope,prefixEnd);
+  if(!COLUMN_CLAUSES.has(clause)) return null;
+  // Only offer unqualified names in column-expression contexts; never propose
+  // columns while typing keywords, table aliases or outside a SELECT block.
+  if(!scope.some(t=>t.value.toUpperCase()==='SELECT')) return null;
+  const sources=[...bindings().entries()].filter(([,table])=>table?.columns?.length);
+  return {kind:'unqualified-column',typed,sources};
 }
 
-module.exports={lexSql,activeQueryTokens,relationBindings,sqlCompletionContext};
+module.exports={lexSql,activeQueryTokens,relationBindings,sqlCompletionContext,collectCtes,visibleCtes};

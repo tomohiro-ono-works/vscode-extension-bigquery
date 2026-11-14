@@ -22,4 +22,6 @@ with ZipFile(target, 'w', compression=ZIP_DEFLATED) as archive:
         archive.write(root / source, destination)
     for source in sorted((root / 'src').glob('*.js')):
         archive.write(source, 'extension/src/' + source.name)
+    for source in sorted((root / 'media').glob('*')):
+        if source.is_file(): archive.write(source, 'extension/media/' + source.name)
 print(target)

@@ -1,8 +1,8 @@
 {
   "name": "bigquery-sql-runner",
   "displayName": "BigQuery SQL Runner",
-  "description": "BigQuery CLI execution and scope-aware table/column completion, including multiline FROM and forward aliases.",
-  "version": "0.3.4",
+  "description": "Explorer-style project/dataset/table/column tree with inline Enter-only dataset/table search and catalog completion",
+  "version": "0.3.7",
   "publisher": "tomohiro-ono-works",
   "license": "MIT",
   "engines": {
@@ -57,16 +57,6 @@
         "icon": "$(refresh)"
       },
       {
-        "command": "bigquerySqlRunner.catalog.editDescription",
-        "title": "BigQuery: Descriptionを編集",
-        "icon": "$(edit)"
-      },
-      {
-        "command": "bigquerySqlRunner.catalog.remove",
-        "title": "BigQuery: 登録・一覧から削除",
-        "icon": "$(trash)"
-      },
-      {
         "command": "bigquerySqlRunner.catalog.export",
         "title": "BigQuery: 登録情報をJSON/YAMLで保存",
         "icon": "$(save)"
@@ -81,7 +71,8 @@
       "explorer": [
         {
           "id": "bigquerySqlRunner.catalog",
-          "name": "BigQuery Completion"
+          "name": "BigQuery Completion",
+          "type": "webview"
         }
       ]
     },
@@ -120,18 +111,7 @@
           "group": "navigation@4"
         }
       ],
-      "view/item/context": [
-        {
-          "command": "bigquerySqlRunner.catalog.editDescription",
-          "when": "view == bigquerySqlRunner.catalog && (viewItem == registeredTable || viewItem == registeredColumn)",
-          "group": "inline@1"
-        },
-        {
-          "command": "bigquerySqlRunner.catalog.remove",
-          "when": "view == bigquerySqlRunner.catalog && (viewItem == registeredTable || viewItem == registeredColumn || viewItem == project)",
-          "group": "inline@2"
-        }
-      ]
+      "view/item/context": []
     },
     "configuration": {
       "title": "BigQuery SQL Runner",
@@ -161,12 +141,7 @@
         }
       }
     },
-    "viewsWelcome": [
-      {
-        "view": "bigquerySqlRunner.catalog",
-        "contents": "プロジェクトを追加すると、データセット・テーブル・カラムを順に展開できます。\n[プロジェクトを追加](command:bigquerySqlRunner.catalog.addProject)"
-      }
-    ]
+    "viewsWelcome": []
   },
   "scripts": {
     "test": "node --test test/*.test.js"

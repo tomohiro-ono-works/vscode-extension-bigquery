@@ -202,7 +202,7 @@ function registerCatalog(context,vscode,dependencies={}) {
     else if(!registeredTables)reason='登録済みテーブルが0件です。BigQuery Completionでテーブルまたはカラムをチェックしてください。';
     else {
       const source=editor.document.getText();
-      candidates=getSuggestions(catalog,source,editor.document.offsetAt(editor.selection.active));
+      candidates=getSuggestions(catalog,source,editor.document.offsetAt(editor.selection.active),{projects,datasetSearches});
       reason=candidates.length?'候補は生成されています。表示されなければCtrl+Spaceで補完を開いてください。':'このカーソル位置では候補がありません。';
     }
     let hostStatus='VSCode候補検査=未実行';
@@ -261,21 +261,25 @@ function registerCatalog(context,vscode,dependencies={}) {
     languages.registerCompletionItemProvider([{language:'googlesql'},{language:'sql'}],{
       provideCompletionItems(document,position){
         const source=document.getText();
-        const proposals=getSuggestions(catalog,source,document.offsetAt(position));
+        const proposals=getSuggestions(catalog,source,document.offsetAt(position),{projects,datasetSearches});
         const items=proposals.map(p=>{
-          const kind=p.kind==='table'||p.kind==='cte'?vscode.CompletionItemKind.Reference:vscode.CompletionItemKind.Field;
+          const kind=p.kind==='snippet'?vscode.CompletionItemKind.Snippet
+            :p.kind==='project'?vscode.CompletionItemKind.Module
+            :p.kind==='dataset'?vscode.CompletionItemKind.Folder
+            :p.kind==='table'||p.kind==='cte'?vscode.CompletionItemKind.Reference:vscode.CompletionItemKind.Field;
           const item=new vscode.CompletionItem(p.label,kind);
-          item.insertText=p.insertText;
+          item.insertText=p.kind==='snippet'?new vscode.SnippetString(p.insertText):p.insertText;
           if(p.filterText)item.filterText=p.filterText;
-          item.detail=`BigQuery Runner · ${p.kind==='table'?'Table':p.kind==='cte'?'CTE':'Column'}: ${p.type}`;
+          item.detail=`BigQuery Runner · ${p.kind}: ${p.type}`;
           item.documentation=p.description||'';
           item.range=new vscode.Range(new vscode.Position(position.line,position.character-p.replace),position);
-          item.sortText='0_'+p.label;
+          item.sortText=p.kind==='snippet'?'!0_'+p.label:`0_${p.priority||0}_`+p.label;
+          if(p.kind==='snippet')item.preselect=true;
           return item;
         });
         return new vscode.CompletionList(items,true);
       }
-    },'.',' ')
+    },'.',' ','`')
   ];
   context.subscriptions.push(...subscriptions);
   return {getCatalog:()=>catalog,getProjects:()=>projects,provider,whenIdle:()=>opQueue,

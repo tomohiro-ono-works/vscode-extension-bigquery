@@ -90,9 +90,14 @@ function catalogToYaml(catalog) {
   return rows.join('\n')+'\n';
 }
 const {sqlCompletionContext} = require('./sql-scope');
-function getSuggestions(catalog,source,position) {
+const {getPathSuggestions}=require('./catalog-paths');
+const {getCreateSuggestions}=require('./syntax-templates');
+function getSuggestions(catalog,source,position,options={}) {
   const tables=Array.isArray(catalog?.tables) ? catalog.tables : [];
+  const syntax=getCreateSuggestions(source,position);
+  if(syntax.length)return syntax;
   const context=sqlCompletionContext(source,position,tables);
+  if(context?.kind==='quoted-relation' || context?.kind==='relation-path')return getPathSuggestions(catalog,context,options);
   if (!context) return [];
   if (context.kind==='table') {
     const physical=tables.filter(t=>t.name.toLowerCase().startsWith(context.typed.toLowerCase()))

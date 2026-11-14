@@ -1,8 +1,8 @@
 {
   "name": "bigquery-sql-runner",
   "displayName": "BigQuery SQL Runner",
-  "description": "Explorer-style project/dataset/table/column tree with inline Enter-only dataset/table search and catalog completion",
-  "version": "0.3.7",
+  "description": "Explorer-style catalog search and scoped table/column/project/dataset and SQL template completion",
+  "version": "0.3.8",
   "publisher": "tomohiro-ono-works",
   "license": "MIT",
   "engines": {

@@ -310,7 +310,21 @@ function sqlCompletionContext(source,position,tables) {
   const src=String(source??'');
   const before=src.slice(0,position);
   const parsed=lexSql(src);
+  // Quoted table references are intentional SQL identifiers, not string literals.
+  // Validate the quote's tokenizer position so lookalikes in comments or strings
+  // cannot trigger completion. VSCode may have already inserted a closing `.
+  const quoted=/(?:^|[^A-Za-z0-9_])(?:FROM|JOIN|UPDATE|INTO)\s+`([A-Za-z0-9_.-]*)$/i.exec(before);
+  if(quoted) {
+    const quoteAt=position-quoted[1].length-1;
+    const token=parsed.tokens.find(t=>t.kind==='identifier' && t.start===quoteAt && t.end>=position);
+    if(token) return {kind:'quoted-relation',path:quoted[1],typed:quoted[1].split('.').at(-1),
+      closeQuote:src[position]!=='`'};
+  }
   if(parsed.excluded.some(([from,to])=>from<position && position<=to)) return null;
+  // Multi-part unquoted references (e.g. FROM project.dataset.) are treated as
+  // table paths, never mistaken for a column alias such as SELECT t1.
+  const plain=/(?:^|[^A-Za-z0-9_])(?:FROM|JOIN|UPDATE|INTO)\s+([A-Za-z_][A-Za-z0-9_.-]*\.)(([A-Za-z0-9_]*)?)$/i.exec(before);
+  if(plain) return {kind:'relation-path',path:plain[1]+plain[2],typed:plain[2],closeQuote:false};
   const definitions=collectCtes(parsed);
   const memo=new Map();
   const computing=new Set();

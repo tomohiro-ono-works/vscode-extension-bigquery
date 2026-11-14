@@ -10,13 +10,19 @@ Previous: [Language v0.2.3](vsix/bigquery-sql-language-0.2.3.vsix). In v0.2.4, C
 
 ## BigQuery SQL Runner (separate VSIX)
 
-**Latest:** [Download BigQuery SQL Runner v0.3.7](vsix/bigquery-sql-runner-0.3.7.vsix) — restored four-level Explorer-style catalog with inline dataset/table Enter search (3+ characters), optional column filtering and project registration; scope-aware table, CTE and column completion in SELECT/WHERE/HAVING etc.
+**Latest:** [Download BigQuery SQL Runner v0.3.9](vsix/bigquery-sql-runner-0.3.9.vsix) — project/dataset/table backtick completion; scoped CTE/column completion; existing Explorer sidebar and Enter-only metadata search. Runner no longer duplicates CREATE syntax snippets; these belong to BigQuery GoogleSQL Language v0.2.4.
 
-SHA-256: `19fa6708fdf3bf46b1aefcdb40e554918387ff86d0832e96a8dfdf1bf74169fb`
+Git blob SHA-1 (VSIX): `0fef793debd41a2b60915d7fd6446938434aecc2`.
 
-**Previous:** [Runner v0.3.4](vsix/bigquery-sql-runner-0.3.4.vsix), [v0.3.3](vsix/bigquery-sql-runner-0.3.3.vsix), [v0.1.0](vsix/bigquery-sql-runner-0.1.0.vsix).
+**Previous:** [Runner v0.3.7](vsix/bigquery-sql-runner-0.3.7.vsix), [Runner v0.3.4](vsix/bigquery-sql-runner-0.3.4.vsix), [v0.3.3](vsix/bigquery-sql-runner-0.3.3.vsix), [v0.1.0](vsix/bigquery-sql-runner-0.1.0.vsix).
 
-The runner requires Google's official `gcloud` and `bq` tools. No credentials are bundled. The runnable JavaScript sources and tests for v0.3.7 are in `runner/`. Unit tests and a headless Chromium interaction test passed. Windows VSCode UI and live BigQuery connectivity remain unverified; Windows CLI/PATH hardening remains open.
+The runner requires Google's official `gcloud` and `bq` tools. No credentials are bundled. The runnable JavaScript sources and tests for v0.3.9 are in `runner/`. Unit tests and a headless Chromium interaction test passed. Windows VSCode UI and live BigQuery connectivity remain unverified; Windows CLI/PATH hardening remains open.
+
+## Completion catalog files and storage
+
+- Language syntax and snippet catalog: [src/completion.js](src/completion.js). The keyword/function dictionary is derived from [syntaxes/googlesql.tmLanguage.json](syntaxes/googlesql.tmLanguage.json).
+- Runner's opt-in BigQuery table/column catalog data model: [runner/src/catalog.js](runner/src/catalog.js); the project/dataset/table path completion logic is in [runner/src/catalog-paths.js](runner/src/catalog-paths.js).
+- Registered table/column data is kept in VSCode **workspaceState**, key `bigquerySqlRunner.catalog.v1`. The extension does **not** create a catalog JSON/YAML file automatically; use **BigQuery Completion → Export** to save one.
 
 ## Reference palette
 

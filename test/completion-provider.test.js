@@ -13,6 +13,9 @@ function createFixture(source) {
     CompletionItem:class {
       constructor(label,kind) {this.label=label;this.kind=kind;}
     },
+    CompletionList:class {
+      constructor(items,isIncomplete) {this.items=items;this.isIncomplete=isIncomplete;}
+    },
     SnippetString:class {
       constructor(value) {this.value=value;}
     },
@@ -23,7 +26,7 @@ function createFixture(source) {
       registerCompletionItemProvider(language,handler,...triggerCharacters) {
         selector=language;
         provider=handler;
-        assert.deepEqual(triggerCharacters,[]);
+        assert.deepEqual(triggerCharacters,[' ']);
         return {dispose(){disposed=true;}};
       }
     }
@@ -173,4 +176,22 @@ test('offers GROUP BY ALL rather than a partial GROUP BY and promotes ORDER BY a
   assert.equal(f.completeEnd().items.find((item)=>item.label==='GROUP BY ALL').sortText,'0_0_GROUP BY ALL');
   const ordered=createFixture('SELECT a FROM t GROUP BY ALL\nO');ordered.register();
   assert.equal(ordered.completeEnd().items.find((item)=>item.label==='ORDER BY').sortText,'0_0_ORDER BY');
+});
+
+
+test('CREATE templates remain full statements when typing multiple phrase words', () => {
+  for (const text of ['CRE','CREATE','CREATE ','CREATE OR','CREATE OR ','CREATE OR RE','CREATE OR REPLACE','CREATE OR REPLACE T']) {
+    const f=createFixture(text);f.register();
+    const result=f.completeEnd();
+    const item=result.items.find(x=>x.label==='CREATE OR REPLACE TABLE');
+    assert.ok(item,text);
+    assert.equal(item.kind,f.vscode.CompletionItemKind.Snippet);
+    assert.equal(item.range.start.character,0);
+    assert.match(item.insertText.value,/CREATE OR REPLACE TABLE .+ AS\n/);
+    assert.ok(!result.items.some(x=>x.label==='CREATE'));
+  }
+  for (const text of ['SELECT CREATE','SELECT CRE','SELECT 1; SELECT CREATE']) {
+    const f=createFixture(text);f.register();
+    assert.equal(f.completeEnd().items.some(x=>x.label.startsWith('CREATE ')),false,text);
+  }
 });

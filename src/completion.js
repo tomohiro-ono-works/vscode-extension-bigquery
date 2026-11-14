@@ -25,9 +25,9 @@ const catalog = Object.freeze({
 // completions with selectable, tab-navigable GoogleSQL syntax templates.
 const phraseOnly = new Set(['CREATE','ORDER','GROUP','ON','PARTITION','CLUSTER']);
 const snippets = Object.freeze([
-  {label:'CREATE TEMP TABLE',insertText:'CREATE TEMP TABLE ${1:table_name} AS'},
+  {label:'CREATE TEMP TABLE',insertText:'CREATE TEMP TABLE ${1:table_name} AS\n${2:SELECT * FROM source_table};'},
   {label:'CREATE TEMP FUNCTION',insertText:'CREATE TEMP FUNCTION ${1:function_name}(${2:arguments}) AS (${3:expression});'},
-  {label:'CREATE OR REPLACE TABLE',insertText:'CREATE OR REPLACE TABLE ${1:project}.${2:dataset}.${3:table_name}'},
+  {label:'CREATE OR REPLACE TABLE',insertText:'CREATE OR REPLACE TABLE `${1:project}.${2:dataset}.${3:table_name}` AS\n${4:SELECT * FROM source_table};'},
   {label:'CREATE OR REPLACE FUNCTION',insertText:'CREATE OR REPLACE FUNCTION ${1:project}.${2:dataset}.${3:function_name}(${4:arguments}) AS (${5:expression});'},
   {label:'CREATE OR REPLACE PROCEDURE',insertText:'CREATE OR REPLACE PROCEDURE ${1:project}.${2:dataset}.${3:procedure_name}(${4:arguments})\nBEGIN\n  ${5:statement};\nEND;'},
   {label:'CREATE OR REPLACE TABLE FUNCTION',insertText:'CREATE OR REPLACE TABLE FUNCTION ${1:project}.${2:dataset}.${3:function_name}(${4:arguments}) AS (\n  ${5:SELECT * FROM table_name}\n);'},

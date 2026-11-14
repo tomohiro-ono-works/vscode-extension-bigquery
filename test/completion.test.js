@@ -78,3 +78,12 @@ test('syntax snippets contain the requested whole statements with numbered input
   assert.match(procedure.insertText,/PROCEDURE \$\{1:project\}\.\$\{2:dataset\}\.\$\{3:procedure_name\}/);
   assert.ok(findCompletions('clu').some((item)=>item.label==='CLUSTER BY'));
 });
+
+
+test('CREATE table snippets include a SQL body and tab-stop placeholders', () => {
+  const temp=findCompletions('CREATE').find(x=>x.label==='CREATE TEMP TABLE');
+  assert.match(temp.insertText,/CREATE TEMP TABLE .+ AS\n/);
+  const replace=findCompletions('CREATE OR').find(x=>x.label==='CREATE OR REPLACE TABLE');
+  assert.match(replace.insertText,/CREATE OR REPLACE TABLE .+ AS\n/);
+  assert.equal(findCompletions('CREATE').some(x=>x.label==='CREATE'),false);
+});

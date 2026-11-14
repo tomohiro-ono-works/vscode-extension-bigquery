@@ -1,53 +1,174 @@
 {
   "name": "bigquery-sql-runner",
   "displayName": "BigQuery SQL Runner",
-  "description": "Google Cloud CLI login, BigQuery dry run, and explicit GoogleSQL execution from Visual Studio Code.",
-  "version": "0.1.0",
+  "description": "BigQuery CLI execution and scope-aware table/column completion, including multiline FROM and forward aliases.",
+  "version": "0.3.4",
   "publisher": "tomohiro-ono-works",
   "license": "MIT",
-  "engines": {"vscode": "^1.85.0"},
+  "engines": {
+    "vscode": "^1.85.0"
+  },
   "main": "./src/extension.js",
   "activationEvents": [
+    "onLanguage:googlesql",
+    "onLanguage:sql",
     "onCommand:bigquerySqlRunner.login",
     "onCommand:bigquerySqlRunner.dryRun",
-    "onCommand:bigquerySqlRunner.execute"
+    "onCommand:bigquerySqlRunner.execute",
+    "onView:bigquerySqlRunner.catalog",
+    "onCommand:bigquerySqlRunner.catalog.diagnose"
   ],
-  "extensionKind": ["workspace"],
-  "categories": ["Other"],
-  "keywords": ["BigQuery", "GoogleSQL", "Google Cloud", "SQL", "dry run"],
+  "extensionKind": [
+    "workspace"
+  ],
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "BigQuery",
+    "GoogleSQL",
+    "Google Cloud",
+    "SQL",
+    "dry run",
+    "catalog"
+  ],
   "contributes": {
     "commands": [
-      {"command": "bigquerySqlRunner.login", "title": "BigQuery: Log in with Google Cloud CLI"},
-      {"command": "bigquerySqlRunner.dryRun", "title": "BigQuery: Dry Run SQL"},
-      {"command": "bigquerySqlRunner.execute", "title": "BigQuery: Execute SQL"}
+      {
+        "command": "bigquerySqlRunner.login",
+        "title": "BigQuery: Log in with Google Cloud CLI"
+      },
+      {
+        "command": "bigquerySqlRunner.dryRun",
+        "title": "BigQuery: Dry Run SQL"
+      },
+      {
+        "command": "bigquerySqlRunner.execute",
+        "title": "BigQuery: Execute SQL"
+      },
+      {
+        "command": "bigquerySqlRunner.catalog.addProject",
+        "title": "BigQuery: プロジェクトを追加",
+        "icon": "$(add)"
+      },
+      {
+        "command": "bigquerySqlRunner.catalog.refresh",
+        "title": "BigQuery: ツリーを更新",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "bigquerySqlRunner.catalog.editDescription",
+        "title": "BigQuery: Descriptionを編集",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "bigquerySqlRunner.catalog.remove",
+        "title": "BigQuery: 登録・一覧から削除",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "bigquerySqlRunner.catalog.export",
+        "title": "BigQuery: 登録情報をJSON/YAMLで保存",
+        "icon": "$(save)"
+      },
+      {
+        "command": "bigquerySqlRunner.catalog.diagnose",
+        "title": "BigQuery: 補完状態を診断",
+        "icon": "$(search)"
+      }
     ],
+    "views": {
+      "explorer": [
+        {
+          "id": "bigquerySqlRunner.catalog",
+          "name": "BigQuery Completion"
+        }
+      ]
+    },
     "menus": {
       "editor/context": [
-        {"command": "bigquerySqlRunner.dryRun", "when": "editorLangId == googlesql || editorLangId == sql", "group": "1_modification@10"},
-        {"command": "bigquerySqlRunner.execute", "when": "editorLangId == googlesql || editorLangId == sql", "group": "1_modification@11"}
+        {
+          "command": "bigquerySqlRunner.dryRun",
+          "when": "editorLangId == googlesql || editorLangId == sql",
+          "group": "1_modification@10"
+        },
+        {
+          "command": "bigquerySqlRunner.execute",
+          "when": "editorLangId == googlesql || editorLangId == sql",
+          "group": "1_modification@11"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "bigquerySqlRunner.catalog.addProject",
+          "when": "view == bigquerySqlRunner.catalog",
+          "group": "navigation@1"
+        },
+        {
+          "command": "bigquerySqlRunner.catalog.refresh",
+          "when": "view == bigquerySqlRunner.catalog",
+          "group": "navigation@2"
+        },
+        {
+          "command": "bigquerySqlRunner.catalog.export",
+          "when": "view == bigquerySqlRunner.catalog",
+          "group": "navigation@3"
+        },
+        {
+          "command": "bigquerySqlRunner.catalog.diagnose",
+          "when": "view == bigquerySqlRunner.catalog",
+          "group": "navigation@4"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "bigquerySqlRunner.catalog.editDescription",
+          "when": "view == bigquerySqlRunner.catalog && (viewItem == registeredTable || viewItem == registeredColumn)",
+          "group": "inline@1"
+        },
+        {
+          "command": "bigquerySqlRunner.catalog.remove",
+          "when": "view == bigquerySqlRunner.catalog && (viewItem == registeredTable || viewItem == registeredColumn || viewItem == project)",
+          "group": "inline@2"
+        }
       ]
     },
     "configuration": {
       "title": "BigQuery SQL Runner",
       "properties": {
         "bigquerySqlRunner.projectId": {
-          "type": "string", "default": "",
-          "description": "Google Cloud project ID. Empty uses the active `gcloud` CLI project."
+          "type": "string",
+          "default": "",
+          "description": "Google Cloud project ID. Empty uses the active gcloud CLI project."
         },
         "bigquerySqlRunner.location": {
-          "type": "string", "default": "",
-          "description": "Optional BigQuery location, for example asia-northeast1 or US."
+          "type": "string",
+          "default": "",
+          "description": "Optional BigQuery location."
         },
         "bigquerySqlRunner.maxRows": {
-          "type": "integer", "default": 100, "minimum": 1, "maximum": 1000,
-          "description": "Maximum displayed result rows (1 to 1000)."
+          "type": "integer",
+          "default": 100,
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Maximum result rows."
         },
         "bigquerySqlRunner.maximumBytesBilled": {
-          "type": "string", "default": "1000000000", "pattern": "^[1-9][0-9]*$",
-          "description": "Per-query billing cap in bytes for explicit execution (default 1,000,000,000 bytes)."
+          "type": "string",
+          "default": "1000000000",
+          "pattern": "^[1-9][0-9]*$",
+          "description": "Per-query billing cap in bytes."
         }
       }
-    }
+    },
+    "viewsWelcome": [
+      {
+        "view": "bigquerySqlRunner.catalog",
+        "contents": "プロジェクトを追加すると、データセット・テーブル・カラムを順に展開できます。\n[プロジェクトを追加](command:bigquerySqlRunner.catalog.addProject)"
+      }
+    ]
   },
-  "scripts": {"test": "node --test test/*.test.js"}
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
 }

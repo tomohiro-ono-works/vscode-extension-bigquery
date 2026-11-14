@@ -10,13 +10,13 @@ SHA-256: `7abc62101bd56927291ae71a160b55cc81c400218087b86c5614916b98fddbfa`
 
 ## BigQuery SQL Runner (separate VSIX)
 
-**Latest:** [Download BigQuery SQL Runner v0.3.3](vsix/bigquery-sql-runner-0.3.3.vsix) — Google Cloud CLI login, SQL execution/dry-run, four-level Project → Dataset → Table → Column Explorer, opt-in table/column completion, descriptions, and completion diagnostics.
+**Latest:** [Download BigQuery SQL Runner v0.3.4](vsix/bigquery-sql-runner-0.3.4.vsix) — multiline FROM/JOIN completion, forward alias resolution (`SELECT t1.` before FROM), CTE-isolated alias scopes, descriptions and Explorer catalog.
 
-SHA-256: `e37ce6f6d7654e3e667414cdeb72448e19ba122fe583fa2c37c44eb89da2b952`
+SHA-256: `71d4e6152d2147b77dc5e82f23d97129de7d64f470a993dc8e162e414aab962f`
 
-**Previous:** [Runner v0.1.0](vsix/bigquery-sql-runner-0.1.0.vsix) (archived).
+**Previous:** [Runner v0.3.3](vsix/bigquery-sql-runner-0.3.3.vsix) and [v0.1.0](vsix/bigquery-sql-runner-0.1.0.vsix).
 
-The runner requires Google's official `gcloud` and `bq` tools. No credentials are bundled. This v0.3.3 VSIX contains its runnable JavaScript sources under `extension/src/`. Live BigQuery connectivity and Windows VSCode UI were not tested. The existing Windows CLI/PATH hardening concern remains open.
+The runner requires Google's official `gcloud` and `bq` tools. No credentials are bundled. This v0.3.4 VSIX contains its runnable JavaScript sources under `extension/src/`. Live BigQuery connectivity and Windows VSCode UI were not tested. The existing Windows CLI/PATH hardening concern remains open.
 
 ## Reference palette
 

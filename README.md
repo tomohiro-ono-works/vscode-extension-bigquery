@@ -10,13 +10,13 @@ Previous: [Language v0.2.3](vsix/bigquery-sql-language-0.2.3.vsix). In v0.2.4, C
 
 ## BigQuery SQL Runner (separate VSIX)
 
-**Latest:** [Download BigQuery SQL Runner v0.3.9](vsix/bigquery-sql-runner-0.3.9.vsix) — project/dataset/table backtick completion; scoped CTE/column completion; existing Explorer sidebar and Enter-only metadata search. Runner no longer duplicates CREATE syntax snippets; these belong to BigQuery GoogleSQL Language v0.2.4.
+**Latest:** [Download BigQuery SQL Runner v0.4.0](vsix/bigquery-sql-runner-0.4.0.vsix) — Runner now offers project/dataset/table catalog suggestions inside Language v0.2.4 CREATE OR REPLACE snippet placeholders, without duplicating CREATE syntax. Explorer and explicit search remain unchanged.
 
 Git blob SHA-1 (VSIX): `0fef793debd41a2b60915d7fd6446938434aecc2`.
 
-**Previous:** [Runner v0.3.7](vsix/bigquery-sql-runner-0.3.7.vsix), [Runner v0.3.4](vsix/bigquery-sql-runner-0.3.4.vsix), [v0.3.3](vsix/bigquery-sql-runner-0.3.3.vsix), [v0.1.0](vsix/bigquery-sql-runner-0.1.0.vsix).
+**Previous:** [Runner v0.3.9](vsix/bigquery-sql-runner-0.3.9.vsix), [Runner v0.3.7](vsix/bigquery-sql-runner-0.3.7.vsix), [Runner v0.3.4](vsix/bigquery-sql-runner-0.3.4.vsix), [v0.3.3](vsix/bigquery-sql-runner-0.3.3.vsix), [v0.1.0](vsix/bigquery-sql-runner-0.1.0.vsix).
 
-The runner requires Google's official `gcloud` and `bq` tools. No credentials are bundled. The runnable JavaScript sources and tests for v0.3.9 are in `runner/`. Unit tests and a headless Chromium interaction test passed. Windows VSCode UI and live BigQuery connectivity remain unverified; Windows CLI/PATH hardening remains open.
+The runner requires Google's official `gcloud` and `bq` tools. No credentials are bundled. The runnable JavaScript sources and tests for v0.4.0 are in `runner/`. Unit tests and a headless Chromium interaction test passed. Windows VSCode UI and live BigQuery connectivity remain unverified; Windows CLI/PATH hardening remains open.
 
 ## Completion catalog files and storage
 

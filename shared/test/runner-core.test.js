@@ -2,7 +2,7 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const core=require('../../shared/googlesql-core/sql-scope');
 const runner=require('../../runner/src/sql-scope');
-const {getSuggestions}=require('../src/catalog');
+const {getSuggestions}=require('../../runner/src/catalog');
 test('Runner SQL scope functions are direct Core exports',()=>{
   assert.strictEqual(runner.lexSql,core.lexSql);
   assert.strictEqual(runner.sqlCompletionContext,core.sqlCompletionContext);

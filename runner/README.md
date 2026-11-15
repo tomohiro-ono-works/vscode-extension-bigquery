@@ -1,3 +1,14 @@
+# BigQuery SQL Runner v0.4.0
+
+## v0.4.0: CREATE target catalog completion, without SQL syntax duplication
+
+- BigQuery GoogleSQL Language v0.2.4 continues to own CREATE SQL snippets. Runner only supplies registered project/dataset/table names at CREATE declaration targets.
+- The CREATE OR REPLACE TABLE/VIEW snippets can use cached project/dataset/table completions. FUNCTION, PROCEDURE and TABLE FUNCTION offer project/dataset names only.
+- The selected `project`, `dataset`, `table_name` snippet tab stops can trigger VSCode suggestions without requiring typing. Existing dots and closing backticks are preserved.
+- No hard inter-extension dependency; both completion providers use VSCode APIs independently. No BigQuery I/O during completion. Explorer sidebar remains unchanged.
+
+---
+
 # BigQuery SQL Runner v0.3.9
 
 ## Corrected extension responsibilities

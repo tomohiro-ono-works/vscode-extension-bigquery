@@ -5,6 +5,23 @@
 // SELECT/CTE scopes separate, including forward references to a later FROM.
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const RELATION_START = new Set(['FROM','JOIN','UPDATE','INTO']);
+// SQL CREATE snippets remain exclusively within the independent Language extension.
+const REFERENCE_HEAD = String.raw`(?:FROM|JOIN|UPDATE|INTO)\s+`;
+const CREATE_HEAD = String.raw`CREATE\s+(?:(?:OR\s+REPLACE|TEMP(?:ORARY)?)\s+)*(?:(?:EXTERNAL|MATERIALIZED)\s+)?(TABLE\s+FUNCTION|TABLE|VIEW|FUNCTION|PROCEDURE)\s+(?:IF\s+NOT\s+EXISTS\s+)?`;
+const QUOTED_PATH = new RegExp(String.raw`(?:^|[^A-Za-z0-9_])(?:${REFERENCE_HEAD}|${CREATE_HEAD})\x60([A-Za-z0-9_.-]*)'use strict';
+
+// Offline structural SQL analysis for completion. No SQL is executed and no
+// credentials, network calls, or third-party parsers are involved. It keeps
+// SELECT/CTE scopes separate, including forward references to a later FROM.
+const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
+,'i');
+const UNQUOTED_PATH = new RegExp(String.raw`(?:^|[^A-Za-z0-9_])(?:${REFERENCE_HEAD}|${CREATE_HEAD})([A-Za-z_][A-Za-z0-9_.-]*\.)([A-Za-z0-9_]*)'use strict';
+
+// Offline structural SQL analysis for completion. No SQL is executed and no
+// credentials, network calls, or third-party parsers are involved. It keeps
+// SELECT/CTE scopes separate, including forward references to a later FROM.
+const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
+,'i');
 const ALIAS_STOP = new Set([
   'ON','USING','WHERE','JOIN','INNER','LEFT','RIGHT','FULL','CROSS','OUTER','NATURAL',
   'GROUP','ORDER','HAVING','QUALIFY','LIMIT','UNION','INTERSECT','EXCEPT','WINDOW',
@@ -313,18 +330,22 @@ function sqlCompletionContext(source,position,tables) {
   // Quoted table references are intentional SQL identifiers, not string literals.
   // Validate the quote's tokenizer position so lookalikes in comments or strings
   // cannot trigger completion. VSCode may have already inserted a closing `.
-  const quoted=/(?:^|[^A-Za-z0-9_])(?:FROM|JOIN|UPDATE|INTO)\s+`([A-Za-z0-9_.-]*)$/i.exec(before);
+  const quoted=QUOTED_PATH.exec(before);
   if(quoted) {
-    const quoteAt=position-quoted[1].length-1;
+    const path=quoted[2];
+    const quoteAt=position-path.length-1;
     const token=parsed.tokens.find(t=>t.kind==='identifier' && t.start===quoteAt && t.end>=position);
-    if(token) return {kind:'quoted-relation',path:quoted[1],typed:quoted[1].split('.').at(-1),
-      closeQuote:src[position]!=='`'};
+    if(token) return {kind:'quoted-relation',path,typed:path.split('.').at(-1),
+      createKind:quoted[1]?.replace(/\s+/g,' ').toUpperCase()||null,
+      nextChar:src[position]||'',closeQuote:src[position]!=='`'};
   }
   if(parsed.excluded.some(([from,to])=>from<position && position<=to)) return null;
   // Multi-part unquoted references (e.g. FROM project.dataset.) are treated as
   // table paths, never mistaken for a column alias such as SELECT t1.
-  const plain=/(?:^|[^A-Za-z0-9_])(?:FROM|JOIN|UPDATE|INTO)\s+([A-Za-z_][A-Za-z0-9_.-]*\.)(([A-Za-z0-9_]*)?)$/i.exec(before);
-  if(plain) return {kind:'relation-path',path:plain[1]+plain[2],typed:plain[2],closeQuote:false};
+  const plain=UNQUOTED_PATH.exec(before);
+  if(plain) return {kind:'relation-path',path:plain[2]+plain[3],typed:plain[3],
+    createKind:plain[1]?.replace(/\s+/g,' ').toUpperCase()||null,
+    nextChar:src[position]||'',closeQuote:false};
   const definitions=collectCtes(parsed);
   const memo=new Map();
   const computing=new Set();

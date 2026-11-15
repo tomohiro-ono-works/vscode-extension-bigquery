@@ -6,6 +6,7 @@ const {
   catalogToYaml,getSuggestions
 } = require('./catalog');
 const {validateSearchWord,filterDatasets,makeTableSearch,parseTableSearch} = require('./catalog-search');
+const {sqlCompletionContext} = require('./sql-scope');
 const {runCli} = require('./cli');
 
 const STORE_KEY = 'bigquerySqlRunner.catalog.v1'; // Backward-compatible registration state.
@@ -252,7 +253,26 @@ function registerCatalog(context,vscode,dependencies={}) {
     if(typeof view.onDidDispose==='function')view.onDidDispose(()=>{if(view===webviewView)view=null;});
     emit();
   }};
+  let lastPlaceholderKey='';
+  const selectedCreatePlaceholder=(editor,selection)=>{
+    if(!editor?.document || !selection || selection.isEmpty)return false;
+    if(!['googlesql','sql'].includes(editor.document.languageId))return false;
+    const doc=editor.document,src=doc.getText();
+    const start=doc.offsetAt(selection.start),end=doc.offsetAt(selection.end);
+    if(start>=end || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(src.slice(start,end)))return false;
+    const ctx=sqlCompletionContext(src.slice(0,start)+src.slice(end),start,catalog.tables);
+    return !!ctx?.createKind && (ctx.kind==='quoted-relation'||ctx.kind==='relation-path');
+  };
+  const selections=window.onDidChangeTextEditorSelection?.(event=>{
+    const selection=event.selections?.[0],editor=event.textEditor;
+    if(!selectedCreatePlaceholder(editor,selection))return;
+    const key=`${editor.document.uri?.toString?.()||''}:${editor.document.version||0}:${editor.document.offsetAt(selection.start)}:${editor.document.offsetAt(selection.end)}`;
+    if(key===lastPlaceholderKey)return;
+    lastPlaceholderKey=key;
+    void commands.executeCommand('editor.action.triggerSuggest');
+  });
   const subscriptions=[
+    ...(selections?[selections]:[]),
     window.registerWebviewViewProvider(VIEW_ID,provider),
     safeCommand('bigquerySqlRunner.catalog.addProject',addProject),
     safeCommand('bigquerySqlRunner.catalog.refresh',refresh),
@@ -261,17 +281,37 @@ function registerCatalog(context,vscode,dependencies={}) {
     languages.registerCompletionItemProvider([{language:'googlesql'},{language:'sql'}],{
       provideCompletionItems(document,position){
         const source=document.getText();
-        const proposals=getSuggestions(catalog,source,document.offsetAt(position),{projects,datasetSearches});
+        // Resolve selected Language CREATE snippet placeholders without changing snippets.
+        const selection=window.activeTextEditor?.document===document
+          ? window.activeTextEditor.selection : null;
+        let placeholder=null;
+        if(selection && !selection.isEmpty && selection.start && selection.end) {
+          const start=document.offsetAt(selection.start);
+          const end=document.offsetAt(selection.end);
+          const active=document.offsetAt(position);
+          const selected=source.slice(start,end);
+          if(start<end && (active===start || active===end)
+            && /^[A-Za-z_][A-Za-z0-9_]*$/.test(selected)) {
+            const without=source.slice(0,start)+source.slice(end);
+            const ctx=sqlCompletionContext(without,start,catalog.tables);
+            if((ctx?.kind==='quoted-relation'||ctx?.kind==='relation-path')
+              && ctx.createKind) placeholder={start,end,selected,without,position:start};
+          }
+        }
+        const proposals=getSuggestions(catalog,placeholder?.without??source,
+          placeholder?.position??document.offsetAt(position),{projects,datasetSearches});
         const items=proposals.map(p=>{
           const kind=p.kind==='project'?vscode.CompletionItemKind.Module
             :p.kind==='dataset'?vscode.CompletionItemKind.Folder
             :p.kind==='table'||p.kind==='cte'?vscode.CompletionItemKind.Reference:vscode.CompletionItemKind.Field;
           const item=new vscode.CompletionItem(p.label,kind);
           item.insertText=p.insertText;
-          if(p.filterText)item.filterText=p.filterText;
+          if(p.filterText||placeholder)item.filterText=placeholder?.selected||p.filterText;
           item.detail=`BigQuery Runner · ${p.kind}: ${p.type}`;
           item.documentation=p.description||'';
-          item.range=new vscode.Range(new vscode.Position(position.line,position.character-p.replace),position);
+          item.range=placeholder
+            ? new vscode.Range(selection.start,selection.end)
+            : new vscode.Range(new vscode.Position(position.line,position.character-p.replace),position);
           item.sortText=`0_${p.priority||0}_`+p.label;
           return item;
         });

@@ -68,7 +68,7 @@ test('syntax snippets contain the requested whole statements with numbered input
   assert.equal(join.insertText,'JOIN ${1:table_name}\n  ON ${2:left_column} = ${3:right_column}');
 
   const temporary=findCompletions('create').find(({label})=>label==='CREATE TEMP TABLE');
-  assert.equal(temporary.insertText,'CREATE TEMP TABLE ${1:table_name} AS');
+  assert.equal(temporary.insertText,'CREATE TEMP TABLE ${1:table_name} AS\n${2:SELECT * FROM source_table};');
   assert.ok(!temporary.insertText.includes('project'));
 
   const functionSnippet=findCompletions('create').find(({label})=>label==='CREATE TEMP FUNCTION');

@@ -1,7 +1,7 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict');
 const core=require('../../shared/googlesql-core/sql-scope');
-const runner=require('../src/sql-scope');
+const runner=require('../../runner/src/sql-scope');
 const {getSuggestions}=require('../src/catalog');
 test('Runner SQL scope functions are direct Core exports',()=>{
   assert.strictEqual(runner.lexSql,core.lexSql);

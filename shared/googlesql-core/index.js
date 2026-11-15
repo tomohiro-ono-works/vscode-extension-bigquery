@@ -1,3 +1,8 @@
 'use strict';
-// Canonical GoogleSQL parser/tokenizer/catalog; no VSCode or network dependencies.
-module.exports={...require('./sql-scope'),...require('./tokenize'),...require('./completion-context'),...require('./completion')};
+// Shared, pure GoogleSQL analysis and catalogs. No VSCode or BigQuery I/O.
+module.exports = {
+  ...require('./sql-scope'),
+  ...require('./tokenize'),
+  ...require('./completion-context'),
+  ...require('./completion')
+};

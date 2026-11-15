@@ -1,6 +1,6 @@
 'use strict';
 
-const grammar = require('../syntaxes/googlesql.tmLanguage.json');
+const grammar = require('../../syntaxes/googlesql.tmLanguage.json');
 
 // Colors sampled from the reference screenshot. These override the current
 // VSCode color theme in GoogleSQL editors only.

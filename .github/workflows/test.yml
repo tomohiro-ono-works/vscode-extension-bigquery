@@ -10,6 +10,8 @@ jobs:
           node-version: '22'
       - name: Run Language, Runner and Core unit tests
         run: node --test test/*.test.js runner/test/*.test.js shared/test/*.test.js
+      - name: Check committed release VSIX packages before rebuilding
+        run: python3 scripts/verify_vsix.py
       - name: Build both standalone VSIX packages
         run: python3 scripts/build_vsix.py
       - name: Check VSIX archives, shared Core and JavaScript imports

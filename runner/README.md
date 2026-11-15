@@ -1,3 +1,9 @@
+# BigQuery SQL Runner v0.4.2: Shared GoogleSQL Core
+
+The SQL parser has moved to the canonical shared/googlesql-core/sql-scope.js. The Runner code re-exports that module; catalog, CREATE metadata, CTE and scope completion, Explorer UI, BigQuery commands, and stored registrations are unchanged. Runner ships its own copy of the common library; Language is not a runtime dependency.
+
+---
+
 # BigQuery SQL Runner v0.4.1
 
 Fix: repair GitHub-published v0.4.0 malformed JavaScript, restore sidebar activation, and complete unquoted CREATE FUNCTION/PROCEDURE/TABLE FUNCTION snippet project and dataset placeholders. The Language extension continues to own SQL syntax; catalog UI and persisted registrations are unchanged. All distribution JavaScript must pass `node --check` before packaging.

@@ -2,15 +2,19 @@
   "name": "bigquery-sql-language",
   "displayName": "BigQuery GoogleSQL Language",
   "description": "GoogleSQL highlighting, selection highlighting, and offline context-aware syntax and function completion for Visual Studio Code.",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "publisher": "tomohiro-ono-works",
   "license": "MIT",
   "engines": {
     "vscode": "^1.85.0"
   },
   "main": "./src/extension.js",
-  "activationEvents": ["onLanguage:googlesql"],
-  "extensionKind": ["ui"],
+  "activationEvents": [
+    "onLanguage:googlesql"
+  ],
+  "extensionKind": [
+    "ui"
+  ],
   "categories": [
     "Programming Languages"
   ],

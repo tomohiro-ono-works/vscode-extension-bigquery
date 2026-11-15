@@ -4,23 +4,26 @@ An offline VSCode language mode for BigQuery GoogleSQL. Provides keyword, functi
 
 ## Download VSIX
 
-Download [BigQuery GoogleSQL Language v0.2.4](vsix/bigquery-sql-language-0.2.4.vsix) and install it with **Extensions → ... → Install from VSIX** in VSCode.
+Download [BigQuery GoogleSQL Language v0.2.5](vsix/bigquery-sql-language-0.2.5.vsix) and install it with **Extensions → ... → Install from VSIX** in VSCode.
 
 Previous: [Language v0.2.3](vsix/bigquery-sql-language-0.2.3.vsix). In v0.2.4, CREATE syntax snippets remain in the Language extension and support multiword completion (`CREATE OR ...`) and complete `AS SELECT` table templates.
 
 ## BigQuery SQL Runner (separate VSIX)
 
-**Latest:** [Download BigQuery SQL Runner v0.4.1](vsix/bigquery-sql-runner-0.4.1.vsix) — repairs the broken v0.4.0 GitHub package (extension activation and missing BigQuery Completion tree) and adds project/dataset suggestions in unquoted CREATE FUNCTION/PROCEDURE snippets. The v0.4.0 GitHub VSIX must not be used.
+**Latest:** [Download BigQuery SQL Runner v0.4.2](vsix/bigquery-sql-runner-0.4.2.vsix) — unchanged catalog UI and completion functionality; SQL parsing is now centralized in the shared GoogleSQL Core.
 
-Git blob SHA-1 (VSIX): `0fef793debd41a2b60915d7fd6446938434aecc2`.
 
 **Previous:** [Runner v0.3.9](vsix/bigquery-sql-runner-0.3.9.vsix), [Runner v0.3.7](vsix/bigquery-sql-runner-0.3.7.vsix), [Runner v0.3.4](vsix/bigquery-sql-runner-0.3.4.vsix), [v0.3.3](vsix/bigquery-sql-runner-0.3.3.vsix), [v0.1.0](vsix/bigquery-sql-runner-0.1.0.vsix).
 
-The runner requires Google's official `gcloud` and `bq` tools. No credentials are bundled. The runnable JavaScript sources and tests for v0.4.1 are in `runner/`. Unit tests and a headless Chromium interaction test passed. Windows VSCode UI and live BigQuery connectivity remain unverified; Windows CLI/PATH hardening remains open.
+The runner requires Google's official `gcloud` and `bq` tools. No credentials are bundled. The runnable JavaScript sources and tests for v0.4.2 are in `runner/`. Unit tests and a headless Chromium interaction test passed. Windows VSCode UI and live BigQuery connectivity remain unverified; Windows CLI/PATH hardening remains open.
+
+## Shared library: one repository, two VSIX packages
+
+The canonical GoogleSQL tokenizer, syntax/function dictionary, clause analyzer and CTE/alias scope parser are in [shared/googlesql-core](shared/googlesql-core). Language and Runner use small adapter files to import the same source. Both standalone VSIX packages embed identical copies of Core and the canonical TextMate grammar; there is no cross-extension runtime dependency. SQL syntax highlighting and snippets remain in Language, and BigQuery communication, Explorer UI and catalog completion remain in Runner. Every Core change requires rebuilding both VSIX packages and testing them together.
 
 ## Completion catalog files and storage
 
-- Language syntax and snippet catalog: [src/completion.js](src/completion.js). The keyword/function dictionary is derived from [syntaxes/googlesql.tmLanguage.json](syntaxes/googlesql.tmLanguage.json).
+- Language syntax and snippet catalog: [shared/googlesql-core/completion.js](shared/googlesql-core/completion.js). The keyword/function dictionary is derived from [syntaxes/googlesql.tmLanguage.json](syntaxes/googlesql.tmLanguage.json).
 - Runner's opt-in BigQuery table/column catalog data model: [runner/src/catalog.js](runner/src/catalog.js); the project/dataset/table path completion logic is in [runner/src/catalog-paths.js](runner/src/catalog-paths.js).
 - Registered table/column data is kept in VSCode **workspaceState**, key `bigquerySqlRunner.catalog.v1`. The extension does **not** create a catalog JSON/YAML file automatically; use **BigQuery Completion → Export** to save one.
 

@@ -1,3 +1,9 @@
+# BigQuery SQL Runner v0.4.1
+
+Fix: repair GitHub-published v0.4.0 malformed JavaScript, restore sidebar activation, and complete unquoted CREATE FUNCTION/PROCEDURE/TABLE FUNCTION snippet project and dataset placeholders. The Language extension continues to own SQL syntax; catalog UI and persisted registrations are unchanged. All distribution JavaScript must pass `node --check` before packaging.
+
+---
+
 # BigQuery SQL Runner v0.4.0
 
 ## v0.4.0: CREATE target catalog completion, without SQL syntax duplication

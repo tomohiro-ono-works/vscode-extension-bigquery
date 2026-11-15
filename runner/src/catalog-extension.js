@@ -255,9 +255,10 @@ function registerCatalog(context,vscode,dependencies={}) {
   }};
   let lastPlaceholderKey='';
   const selectedCreatePlaceholder=(editor,selection)=>{
-    if(!editor?.document || !selection || selection.isEmpty)return false;
+    if(!editor?.document || !selection || selection.isEmpty) return false;
     if(!['googlesql','sql'].includes(editor.document.languageId))return false;
-    const doc=editor.document,src=doc.getText();
+    const doc=editor.document;
+    const src=doc.getText();
     const start=doc.offsetAt(selection.start),end=doc.offsetAt(selection.end);
     if(start>=end || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(src.slice(start,end)))return false;
     const ctx=sqlCompletionContext(src.slice(0,start)+src.slice(end),start,catalog.tables);
@@ -269,6 +270,7 @@ function registerCatalog(context,vscode,dependencies={}) {
     const key=`${editor.document.uri?.toString?.()||''}:${editor.document.version||0}:${editor.document.offsetAt(selection.start)}:${editor.document.offsetAt(selection.end)}`;
     if(key===lastPlaceholderKey)return;
     lastPlaceholderKey=key;
+    // No metadata I/O. VSCode asks the Runner completion provider for cached entries.
     void commands.executeCommand('editor.action.triggerSuggest');
   });
   const subscriptions=[
@@ -281,7 +283,9 @@ function registerCatalog(context,vscode,dependencies={}) {
     languages.registerCompletionItemProvider([{language:'googlesql'},{language:'sql'}],{
       provideCompletionItems(document,position){
         const source=document.getText();
-        // Resolve selected Language CREATE snippet placeholders without changing snippets.
+        // Language owns snippet insertion. When the cursor is inside a selected
+        // snippet placeholder (project/dataset/table_name), request suggestions
+        // against the text *without* that selection, and replace the full span.
         const selection=window.activeTextEditor?.document===document
           ? window.activeTextEditor.selection : null;
         let placeholder=null;
@@ -293,9 +297,9 @@ function registerCatalog(context,vscode,dependencies={}) {
           if(start<end && (active===start || active===end)
             && /^[A-Za-z_][A-Za-z0-9_]*$/.test(selected)) {
             const without=source.slice(0,start)+source.slice(end);
-            const ctx=sqlCompletionContext(without,start,catalog.tables);
-            if((ctx?.kind==='quoted-relation'||ctx?.kind==='relation-path')
-              && ctx.createKind) placeholder={start,end,selected,without,position:start};
+            const contextWithout=sqlCompletionContext(without,start,catalog.tables);
+            if((contextWithout?.kind==='quoted-relation'||contextWithout?.kind==='relation-path')
+              && contextWithout.createKind) placeholder={start,end,selected,without,position:start};
           }
         }
         const proposals=getSuggestions(catalog,placeholder?.without??source,

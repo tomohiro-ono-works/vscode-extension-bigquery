@@ -8,8 +8,9 @@ function getPathSuggestions(catalog,context,{projects=[],datasetSearches=new Map
   const pieces=path.split('.');
   if(pieces.length>3) return [];
   const quoted=context.kind==='quoted-relation';
-  const prefix=quoted?'':'`';
-  const quoteSuffix=!quoted || context.nextChar!=='`'?'`':'';
+  const segmentMode=quoted || !!context.unquotedCreate;
+  const prefix=segmentMode?'':'`';
+  const quoteSuffix=context.unquotedCreate?'':(!quoted || context.nextChar!=='`'?'`':'');
   const followedByDot=context.nextChar==='.';
   const isCreate=!!context.createKind;
   const tableTarget=!isCreate || ['TABLE','VIEW'].includes(context.createKind);
@@ -18,8 +19,8 @@ function getPathSuggestions(catalog,context,{projects=[],datasetSearches=new Map
   const unique=items=>[...new Set(items.filter(Boolean))].sort(compare);
   const result=[];
   const complete=(label,kind,insertText,detail,filterText,priority=1)=>{
-    const replace=quoted?(pieces.at(-1)||'').length:path.length;
-    const part=quoted?insertText.slice(path.length-(pieces.at(-1)||'').length):insertText;
+    const replace=segmentMode?(pieces.at(-1)||'').length:path.length;
+    const part=segmentMode?insertText.slice(path.length-(pieces.at(-1)||'').length):insertText;
     result.push({label,kind,insertText:prefix+part,replace,description:'',
       type:detail,filterText:quoted && context.typed ? context.typed : filterText,priority});
   };

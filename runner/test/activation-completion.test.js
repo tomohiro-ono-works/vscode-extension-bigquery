@@ -8,7 +8,7 @@ test('extension activates on both SQL language modes without needing to open the
   assert.equal(packageJson.activationEvents.includes('onLanguage:sql'),true);
   assert.equal(packageJson.activationEvents.includes('onLanguage:googlesql'),true);
   assert.equal(packageJson.activationEvents.includes('onView:bigquerySqlRunner.catalog'),true);
-  assert.equal(packageJson.version,'0.4.0');
+  assert.equal(packageJson.version,'0.4.1');
 });
 
 test('registered FROM tables are available without the Language extension', () => {

@@ -5,23 +5,12 @@
 // SELECT/CTE scopes separate, including forward references to a later FROM.
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const RELATION_START = new Set(['FROM','JOIN','UPDATE','INTO']);
-// SQL CREATE snippets remain exclusively within the independent Language extension.
+// The Language extension owns CREATE syntax; this Runner only resolves catalog
+// identifiers at the declaration target, including existing snippet tab stops.
 const REFERENCE_HEAD = String.raw`(?:FROM|JOIN|UPDATE|INTO)\s+`;
 const CREATE_HEAD = String.raw`CREATE\s+(?:(?:OR\s+REPLACE|TEMP(?:ORARY)?)\s+)*(?:(?:EXTERNAL|MATERIALIZED)\s+)?(TABLE\s+FUNCTION|TABLE|VIEW|FUNCTION|PROCEDURE)\s+(?:IF\s+NOT\s+EXISTS\s+)?`;
-const QUOTED_PATH = new RegExp(String.raw`(?:^|[^A-Za-z0-9_])(?:${REFERENCE_HEAD}|${CREATE_HEAD})\x60([A-Za-z0-9_.-]*)'use strict';
-
-// Offline structural SQL analysis for completion. No SQL is executed and no
-// credentials, network calls, or third-party parsers are involved. It keeps
-// SELECT/CTE scopes separate, including forward references to a later FROM.
-const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
-,'i');
-const UNQUOTED_PATH = new RegExp(String.raw`(?:^|[^A-Za-z0-9_])(?:${REFERENCE_HEAD}|${CREATE_HEAD})([A-Za-z_][A-Za-z0-9_.-]*\.)([A-Za-z0-9_]*)'use strict';
-
-// Offline structural SQL analysis for completion. No SQL is executed and no
-// credentials, network calls, or third-party parsers are involved. It keeps
-// SELECT/CTE scopes separate, including forward references to a later FROM.
-const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
-,'i');
+const QUOTED_PATH = new RegExp(String.raw`(?:^|[^A-Za-z0-9_])(?:${REFERENCE_HEAD}|${CREATE_HEAD})\x60([A-Za-z0-9_.-]*)$`,'i');
+const UNQUOTED_PATH = new RegExp(String.raw`(?:^|[^A-Za-z0-9_])(?:${REFERENCE_HEAD}|${CREATE_HEAD})([A-Za-z_][A-Za-z0-9_.-]*\.)([A-Za-z0-9_]*)$`,'i');
 const ALIAS_STOP = new Set([
   'ON','USING','WHERE','JOIN','INNER','LEFT','RIGHT','FULL','CROSS','OUTER','NATURAL',
   'GROUP','ORDER','HAVING','QUALIFY','LIMIT','UNION','INTERSECT','EXCEPT','WINDOW',
@@ -340,12 +329,20 @@ function sqlCompletionContext(source,position,tables) {
       nextChar:src[position]||'',closeQuote:src[position]!=='`'};
   }
   if(parsed.excluded.some(([from,to])=>from<position && position<=to)) return null;
+  // An unquoted CREATE snippet can have an empty selected project placeholder.
+  // Removing the selected placeholder leaves `CREATE ... FUNCTION .dataset.func`,
+  // so the empty project path must be recognized before the following dot.
+  const createStart=/(?:^|[;\r\n])\s*CREATE\s+(?:(?:OR\s+REPLACE|TEMP(?:ORARY)?)\s+)*(?:(?:EXTERNAL|MATERIALIZED)\s+)?(TABLE\s+FUNCTION|TABLE|VIEW|FUNCTION|PROCEDURE)\s+(?:IF\s+NOT\s+EXISTS\s+)?$/i.exec(before);
+  if(createStart && !/\bTEMP(?:ORARY)?\b/i.test(before.slice(createStart.index))) {
+    return {kind:'relation-path',path:'',typed:'',createKind:createStart[1].toUpperCase(),
+      nextChar:src[position]||'',closeQuote:false,unquotedCreate:true};
+  }
   // Multi-part unquoted references (e.g. FROM project.dataset.) are treated as
   // table paths, never mistaken for a column alias such as SELECT t1.
   const plain=UNQUOTED_PATH.exec(before);
   if(plain) return {kind:'relation-path',path:plain[2]+plain[3],typed:plain[3],
     createKind:plain[1]?.replace(/\s+/g,' ').toUpperCase()||null,
-    nextChar:src[position]||'',closeQuote:false};
+    nextChar:src[position]||'',closeQuote:false,unquotedCreate:!!plain[1]};
   const definitions=collectCtes(parsed);
   const memo=new Map();
   const computing=new Set();

@@ -4,18 +4,18 @@ An offline VSCode language mode for BigQuery GoogleSQL. Provides keyword, functi
 
 ## Download VSIX
 
-Download [BigQuery GoogleSQL Language v0.2.6](vsix/bigquery-sql-language-0.2.5.vsix) and install it with **Extensions → ... → Install from VSIX** in VSCode.
+Download [BigQuery GoogleSQL Language v0.2.7](vsix/bigquery-sql-language-0.2.7.vsix) and install it with **Extensions → ... → Install from VSIX** in VSCode.
 
 Previous: [Language v0.2.3](vsix/bigquery-sql-language-0.2.3.vsix). In v0.2.4, CREATE syntax snippets remain in the Language extension and support multiword completion (`CREATE OR ...`) and complete `AS SELECT` table templates.
 
 ## BigQuery SQL Runner (separate VSIX)
 
-**Latest:** [Download BigQuery SQL Runner v0.4.3](vsix/bigquery-sql-runner-0.4.2.vsix) — unchanged catalog UI and completion functionality; SQL parsing is now centralized in the shared GoogleSQL Core.
+**Latest:** [Download BigQuery SQL Runner v0.4.4](vsix/bigquery-sql-runner-0.4.4.vsix) — unchanged catalog UI and completion functionality; SQL parsing is now centralized in the shared GoogleSQL Core.
 
 
 **Previous:** [Runner v0.3.9](vsix/bigquery-sql-runner-0.3.9.vsix), [Runner v0.3.7](vsix/bigquery-sql-runner-0.3.7.vsix), [Runner v0.3.4](vsix/bigquery-sql-runner-0.3.4.vsix), [v0.3.3](vsix/bigquery-sql-runner-0.3.3.vsix), [v0.1.0](vsix/bigquery-sql-runner-0.1.0.vsix).
 
-The runner requires Google's official `gcloud` and `bq` tools. No credentials are bundled. The runnable JavaScript sources and tests for v0.4.3 are in `runner/`. Unit tests and a headless Chromium interaction test passed. Windows VSCode UI and live BigQuery connectivity remain unverified; Windows CLI/PATH hardening remains open.
+The runner requires Google's official `gcloud` and `bq` tools. No credentials are bundled. The runnable JavaScript sources and tests for v0.4.4 are in `runner/`. Unit tests and a headless Chromium interaction test passed. Windows VSCode UI and live BigQuery connectivity remain unverified; Windows CLI/PATH hardening remains open.
 
 ## Shared library: one repository, two VSIX packages
 
@@ -26,6 +26,23 @@ The canonical GoogleSQL tokenizer, syntax/function dictionary, clause analyzer a
 - Canonical dictionaries: [keywords.txt](shared/googlesql-core/dictionaries/keywords.txt) (SQL keywords), [functions.txt](shared/googlesql-core/dictionaries/functions.txt) (functions), [snippets.json](shared/googlesql-core/dictionaries/snippets.json) (multiline templates). [completion.js](shared/googlesql-core/completion.js) loads them once at activation. Run `python scripts/sync_grammar.py --write` after editing keywords/functions to regenerate the TextMate grammar. CI verifies it is synchronized.
 - Runner's opt-in BigQuery table/column catalog data model: [runner/src/catalog.js](runner/src/catalog.js); the project/dataset/table path completion logic is in [runner/src/catalog-paths.js](runner/src/catalog-paths.js).
 - Registered table/column data is kept in VSCode **workspaceState**, key `bigquerySqlRunner.catalog.v1`. The extension does **not** create a catalog JSON/YAML file automatically; use **BigQuery Completion → Export** to save one.
+
+## User-editable dictionaries outside the VSIX (Language v0.2.7)
+
+On first activation, Language copies the bundled defaults to the extension-owned VSCode user data directory:
+
+```text
+%APPDATA%\Code\User\globalStorage\tomohiro-ono-works.bigquery-sql-language\dictionaries\
+  keywords.txt
+  functions.txt
+  snippets.json
+```
+
+**Existing files are never overwritten**, including after an extension upgrade. Language reads these files into memory and watches for changes. Saving a valid change normally refreshes completion automatically; if the filesystem watcher misses an update, use the Command Palette command **BigQuery: Reload SQL Dictionaries**. Invalid files retain the last valid dictionary in memory until repaired.
+
+An optional absolute folder can be set in User Settings via `bigquerySqlLanguage.dictionaryDirectory`. If blank, the global storage folder is used. Missing files are seeded with bundled defaults without changing existing files.
+
+External list changes affect **autocomplete only**. The TextMate highlighter still uses the VSIX-bundled grammar; highlighting new entries requires a rebuilt VSIX. Runner's BigQuery catalog and Explorer tree are independent from these files.
 
 ## Reference palette
 

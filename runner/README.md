@@ -1,3 +1,9 @@
+# BigQuery SQL Runner v0.4.4
+
+Language can now read user-editable external keyword, function and snippet dictionaries. Runner still includes the same default shared Core but does not access the external Language dictionary directory. Existing BigQuery catalog, Explorer UI, CLI calls, execution, and column completion are unchanged.
+
+---
+
 # BigQuery SQL Runner v0.4.3
 
 The shared GoogleSQL Core now reads separate keyword/function `.txt` lists and `snippets.json` from `shared/googlesql-core/dictionaries/`, packaged in both extensions. The Explorer catalog, BigQuery CLI, registered metadata, and SQL runner features remain unchanged.

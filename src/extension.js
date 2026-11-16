@@ -2,6 +2,7 @@
 
 const {PALETTE,tokenize} = require('./tokenize');
 const {registerGoogleSqlCompletion} = require('./completion-provider');
+const {createDictionaryController} = require('./dictionary-controller');
 
 /** Add reference-screenshot colors without replacing the TextMate grammar. */
 function createDecorationController(vscode,{debounceMs=120,maxCharacters=500000}={}) {
@@ -101,6 +102,7 @@ function createSelectionHighlightController(vscode) {
 }
 
 function activate(context,vscode = require('vscode')) {
+  context.subscriptions.push(createDictionaryController(context,vscode));
   context.subscriptions.push(createDecorationController(vscode));
   context.subscriptions.push(createSelectionHighlightController(vscode));
   context.subscriptions.push(registerGoogleSqlCompletion(vscode));

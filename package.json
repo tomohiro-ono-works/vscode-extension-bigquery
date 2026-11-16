@@ -2,7 +2,7 @@
   "name": "bigquery-sql-language",
   "displayName": "BigQuery GoogleSQL Language",
   "description": "GoogleSQL highlighting, selection highlighting, and offline context-aware syntax and function completion for Visual Studio Code.",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "publisher": "tomohiro-ono-works",
   "license": "MIT",
   "engines": {
@@ -54,9 +54,21 @@
           "type": "boolean",
           "default": true,
           "description": "Use the screenshot-matched keyword colors and inline backgrounds for GoogleSQL editors. Disable to use the active VSCode theme only."
+        },
+        "bigquerySqlLanguage.dictionaryDirectory": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "description": "Optional absolute folder containing keywords.txt, functions.txt and snippets.json. Blank uses globalStorageUri/dictionaries; existing files are never overwritten."
         }
       }
-    }
+    },
+    "commands": [
+      {
+        "command": "bigquerySqlLanguage.reloadDictionaries",
+        "title": "BigQuery: Reload SQL Dictionaries"
+      }
+    ]
   },
   "scripts": {
     "test": "node --test test/*.test.js"

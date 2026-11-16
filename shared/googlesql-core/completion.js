@@ -2,29 +2,36 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const snippetsData = require('./dictionaries/snippets.json');
+const BUNDLED_DIRECTORY = path.join(__dirname,'dictionaries');
+const DICTIONARY_FILES = Object.freeze(['keywords.txt','functions.txt','snippets.json']);
+const phraseOnly = new Set(['CREATE','ORDER','GROUP','ON','PARTITION','CLUSTER']);
 
-// Each dictionary is loaded once per extension host, never per keystroke.
-function readWords(filename) {
-  const file = path.join(__dirname, 'dictionaries', filename);
-  const names = fs.readFileSync(file, 'utf8').split(/\r?\n/)
-    .map(x => x.trim()).filter(x => x && !x.startsWith('#'));
-  if (names.some(x => !/^[A-Z_][A-Z0-9_.]*$/.test(x)) || new Set(names).size !== names.length)
-    throw new Error('Invalid or duplicate GoogleSQL dictionary entries: ' + filename);
+function readWords(directory,filename) {
+  const names=fs.readFileSync(path.join(directory,filename),'utf8')
+    .split(/\r?\n/).map(x=>x.trim()).filter(x=>x&&!x.startsWith('#'));
+  if(names.some(x=>!/^[A-Z_][A-Z0-9_.]*$/.test(x))||new Set(names).size!==names.length)
+    throw new Error('Invalid or duplicate GoogleSQL dictionary entries: '+filename);
   return Object.freeze(names.slice().sort());
 }
-
-const catalog = Object.freeze({
-  keywords: readWords('keywords.txt'),
-  functions: readWords('functions.txt')
-});
-const phraseOnly = new Set(['CREATE','ORDER','GROUP','ON','PARTITION','CLUSTER']);
-const snippets = Object.freeze(snippetsData.map(x => Object.freeze({label:x.label,insertText:x.insertText})));
-function getCatalog() {
+function loadSnapshot(directory) {
+  const keywords=readWords(directory,'keywords.txt');
+  const functions=readWords(directory,'functions.txt');
+  const parsed=JSON.parse(fs.readFileSync(path.join(directory,'snippets.json'),'utf8'));
+  if(!Array.isArray(parsed)||parsed.some(x=>!x||typeof x.label!=='string'||!x.label.trim()
+    ||typeof x.insertText!=='string')||new Set(parsed.map(x=>x.label)).size!==parsed.length)
+    throw new Error('Invalid GoogleSQL snippet dictionary');
+  return {catalog:Object.freeze({keywords,functions}),
+    snippets:Object.freeze(parsed.map(x=>Object.freeze({label:x.label,insertText:x.insertText})))};
+}
+let {catalog,snippets}=loadSnapshot(BUNDLED_DIRECTORY);
+function reloadDictionaries(directory=BUNDLED_DIRECTORY) {
+  // Swap only after all files parse successfully; keep prior data if an edit is invalid.
+  const next=loadSnapshot(directory);
+  catalog=next.catalog;snippets=next.snippets;
   return catalog;
 }
+function getCatalog(){return catalog;}
 
-/** Return candidate matches in precedence order. VSCode still owns the popup and word suggestions. */
 function findCompletions(input) {
   const word = String(input ?? '').toUpperCase();
   if (!word) return [];
@@ -50,4 +57,4 @@ function findCompletions(input) {
       || a.label.localeCompare(b.label,'en'));
 }
 
-module.exports = {getCatalog,findCompletions};
+module.exports = {getCatalog,findCompletions,reloadDictionaries,BUNDLED_DIRECTORY,DICTIONARY_FILES};

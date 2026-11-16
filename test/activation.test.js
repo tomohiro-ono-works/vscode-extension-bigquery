@@ -92,7 +92,7 @@ test('activation retains existing decorators and registers GoogleSQL completion 
   const context={subscriptions:[]};
   activate(context,f.vscode);
   assert.equal(completionLanguage,'googlesql');
-  assert.equal(context.subscriptions.length,3);
+  assert.equal(context.subscriptions.length,4);
   assert.equal(f.created.length,9);
   for (const subscription of context.subscriptions) subscription.dispose();
 });

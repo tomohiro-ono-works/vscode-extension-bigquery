@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
 <Metadata>
-<Identity Language="en-US" Id="bigquery-sql-language" Version="0.2.6" Publisher="tomohiro-ono-works"/>
+<Identity Language="en-US" Id="bigquery-sql-language" Version="0.2.7" Publisher="tomohiro-ono-works"/>
 <DisplayName>BigQuery GoogleSQL Language</DisplayName>
 <Description xml:space="preserve">BigQuery GoogleSQL highlighting, SQL functions, syntax templates and completions.</Description>
 <Tags>BigQuery,GoogleSQL,SQL</Tags><Categories>Programming Languages</Categories><GalleryFlags>Public</GalleryFlags>

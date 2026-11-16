@@ -2,8 +2,9 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from zipfile import ZipFile
-import json, subprocess
+import json, subprocess, sys
 ROOT=Path(__file__).resolve().parents[1]
+subprocess.run([sys.executable,str(ROOT/'scripts/sync_grammar.py'),'--check'],check=True)
 versions={
  "language":json.loads((ROOT/"package.json").read_text())["version"],
  "runner":json.loads((ROOT/"runner/package.json").read_text())["version"]
@@ -22,6 +23,12 @@ for kind,version in versions.items():
             b=z.read("extension/shared/googlesql-core/"+source.name)
             assert b==source.read_bytes(), source
             contents[kind][source.name]=b
+        for dictionary in sorted((ROOT/'shared/googlesql-core/dictionaries').iterdir()):
+            if dictionary.is_file():
+                key='extension/shared/googlesql-core/dictionaries/'+dictionary.name
+                raw=z.read(key)
+                assert raw==dictionary.read_bytes(), key
+                contents[kind][dictionary.name]=raw
         with TemporaryDirectory() as temporary:
             z.extractall(temporary)
             root=Path(temporary)/"extension"

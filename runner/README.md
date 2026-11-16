@@ -1,3 +1,9 @@
+# BigQuery SQL Runner v0.4.3
+
+The shared GoogleSQL Core now reads separate keyword/function `.txt` lists and `snippets.json` from `shared/googlesql-core/dictionaries/`, packaged in both extensions. The Explorer catalog, BigQuery CLI, registered metadata, and SQL runner features remain unchanged.
+
+---
+
 # BigQuery SQL Runner v0.4.2: Shared GoogleSQL Core
 
 The SQL parser has moved to the canonical shared/googlesql-core/sql-scope.js. The Runner code re-exports that module; catalog, CREATE metadata, CTE and scope completion, Explorer UI, BigQuery commands, and stored registrations are unchanged. Runner ships its own copy of the common library; Language is not a runtime dependency.

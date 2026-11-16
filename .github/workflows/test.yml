@@ -8,6 +8,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Check grammar generation against the canonical dictionaries
+        run: python3 scripts/sync_grammar.py --check
       - name: Run Language, Runner and Core unit tests
         run: node --test test/*.test.js runner/test/*.test.js shared/test/*.test.js
       - name: Check committed release VSIX packages before rebuilding

@@ -3,13 +3,14 @@ Requires only Python standard library. Usage: python scripts/build_vsix.py
 """
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
-import argparse, json
+import argparse, json, subprocess, sys
 
 ROOT=Path(__file__).resolve().parents[1]
 CORE=ROOT/"shared/googlesql-core"
 GRAMMAR=ROOT/"syntaxes/googlesql.tmLanguage.json"
 
 def build(kind):
+    subprocess.run([sys.executable, str(ROOT/'scripts/sync_grammar.py'), '--check'], check=True)
     parent=ROOT if kind=="language" else ROOT/"runner"
     version=json.loads((parent/"package.json").read_text(encoding="utf-8"))["version"]
     output=ROOT/"vsix"/f"bigquery-sql-{kind}-{version}.vsix"
@@ -44,6 +45,9 @@ def build(kind):
         z.write(GRAMMAR,"extension/syntaxes/googlesql.tmLanguage.json")
         for p in sorted(CORE.glob("*.js")):
             z.write(p,"extension/shared/googlesql-core/"+p.name)
+        for p in sorted((CORE/'dictionaries').iterdir()):
+            if p.is_file():
+                z.write(p,'extension/shared/googlesql-core/dictionaries/'+p.name)
     print(output)
 
 if __name__=="__main__":

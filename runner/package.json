@@ -2,7 +2,7 @@
   "name": "bigquery-sql-runner",
   "displayName": "BigQuery SQL Runner",
   "description": "Explorer-style catalog search and scoped table/column/project/dataset completion",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "publisher": "tomohiro-ono-works",
   "license": "MIT",
   "engines": {

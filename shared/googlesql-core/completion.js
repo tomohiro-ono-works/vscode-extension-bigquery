@@ -1,44 +1,25 @@
 'use strict';
 
-const grammar = require('../../syntaxes/googlesql.tmLanguage.json');
+const fs = require('node:fs');
+const path = require('node:path');
+const snippetsData = require('./dictionaries/snippets.json');
 
-/** Read the alternatives from the existing TextMate rules; never maintain a second SQL dictionary. */
-function namesFromScope(scope) {
-  const expression = grammar.patterns.find((pattern) => pattern.name === scope)?.match;
-  if (!expression) throw new Error(`Missing GoogleSQL grammar scope: ${scope}`);
-  const begin = expression.indexOf('(?:');
-  const end = expression.indexOf(')',begin + 3);
-  if (begin < 0 || end < 0) throw new Error(`Unsupported GoogleSQL grammar scope: ${scope}`);
-  return expression.slice(begin + 3,end).split('|').map((name) =>
-    name.replace(/\\\./g,'.').toUpperCase());
+// Each dictionary is loaded once per extension host, never per keystroke.
+function readWords(filename) {
+  const file = path.join(__dirname, 'dictionaries', filename);
+  const names = fs.readFileSync(file, 'utf8').split(/\r?\n/)
+    .map(x => x.trim()).filter(x => x && !x.startsWith('#'));
+  if (names.some(x => !/^[A-Z_][A-Z0-9_.]*$/.test(x)) || new Set(names).size !== names.length)
+    throw new Error('Invalid or duplicate GoogleSQL dictionary entries: ' + filename);
+  return Object.freeze(names.slice().sort());
 }
 
 const catalog = Object.freeze({
-  keywords: Object.freeze([...new Set(namesFromScope('keyword.control.googlesql'))].sort()),
-  functions: Object.freeze([...new Set([
-    ...namesFromScope('support.function.builtin.googlesql'),
-    ...namesFromScope('support.function.namespace.googlesql')
-  ])].sort())
+  keywords: readWords('keywords.txt'),
+  functions: readWords('functions.txt')
 });
-
-// Preserve the grammar's complete dictionary while replacing partial clause
-// completions with selectable, tab-navigable GoogleSQL syntax templates.
 const phraseOnly = new Set(['CREATE','ORDER','GROUP','ON','PARTITION','CLUSTER']);
-const snippets = Object.freeze([
-  {label:'CREATE TEMP TABLE',insertText:'CREATE TEMP TABLE ${1:table_name} AS\n${2:SELECT * FROM source_table};'},
-  {label:'CREATE TEMP FUNCTION',insertText:'CREATE TEMP FUNCTION ${1:function_name}(${2:arguments}) AS (${3:expression});'},
-  {label:'CREATE OR REPLACE TABLE',insertText:'CREATE OR REPLACE TABLE `${1:project}.${2:dataset}.${3:table_name}` AS\n${4:SELECT * FROM source_table};'},
-  {label:'CREATE OR REPLACE FUNCTION',insertText:'CREATE OR REPLACE FUNCTION ${1:project}.${2:dataset}.${3:function_name}(${4:arguments}) AS (${5:expression});'},
-  {label:'CREATE OR REPLACE PROCEDURE',insertText:'CREATE OR REPLACE PROCEDURE ${1:project}.${2:dataset}.${3:procedure_name}(${4:arguments})\nBEGIN\n  ${5:statement};\nEND;'},
-  {label:'CREATE OR REPLACE TABLE FUNCTION',insertText:'CREATE OR REPLACE TABLE FUNCTION ${1:project}.${2:dataset}.${3:function_name}(${4:arguments}) AS (\n  ${5:SELECT * FROM table_name}\n);'},
-  {label:'CREATE OR REPLACE VIEW',insertText:'CREATE OR REPLACE VIEW ${1:project}.${2:dataset}.${3:view_name} AS\n${4:SELECT * FROM table_name};'},
-  {label:'PARTITION BY',insertText:'PARTITION BY ${1:column_name}'},
-  {label:'CLUSTER BY',insertText:'CLUSTER BY ${1:column_name}'},
-  {label:'GROUP BY ALL',insertText:'GROUP BY ALL'},
-  {label:'ORDER BY',insertText:'ORDER BY ${1:expression}'},
-  {label:'JOIN',insertText:'JOIN ${1:table_name}\n  ON ${2:left_column} = ${3:right_column}'}
-].map(Object.freeze));
-
+const snippets = Object.freeze(snippetsData.map(x => Object.freeze({label:x.label,insertText:x.insertText})));
 function getCatalog() {
   return catalog;
 }

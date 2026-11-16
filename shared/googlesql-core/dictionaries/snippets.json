@@ -1,0 +1,50 @@
+[
+  {
+    "label": "CREATE TEMP TABLE",
+    "insertText": "CREATE TEMP TABLE ${1:table_name} AS\n${2:SELECT * FROM source_table};"
+  },
+  {
+    "label": "CREATE TEMP FUNCTION",
+    "insertText": "CREATE TEMP FUNCTION ${1:function_name}(${2:arguments}) AS (${3:expression});"
+  },
+  {
+    "label": "CREATE OR REPLACE TABLE",
+    "insertText": "CREATE OR REPLACE TABLE `${1:project}.${2:dataset}.${3:table_name}` AS\n${4:SELECT * FROM source_table};"
+  },
+  {
+    "label": "CREATE OR REPLACE FUNCTION",
+    "insertText": "CREATE OR REPLACE FUNCTION ${1:project}.${2:dataset}.${3:function_name}(${4:arguments}) AS (${5:expression});"
+  },
+  {
+    "label": "CREATE OR REPLACE PROCEDURE",
+    "insertText": "CREATE OR REPLACE PROCEDURE ${1:project}.${2:dataset}.${3:procedure_name}(${4:arguments})\nBEGIN\n  ${5:statement};\nEND;"
+  },
+  {
+    "label": "CREATE OR REPLACE TABLE FUNCTION",
+    "insertText": "CREATE OR REPLACE TABLE FUNCTION ${1:project}.${2:dataset}.${3:function_name}(${4:arguments}) AS (\n  ${5:SELECT * FROM table_name}\n);"
+  },
+  {
+    "label": "CREATE OR REPLACE VIEW",
+    "insertText": "CREATE OR REPLACE VIEW ${1:project}.${2:dataset}.${3:view_name} AS\n${4:SELECT * FROM table_name};"
+  },
+  {
+    "label": "PARTITION BY",
+    "insertText": "PARTITION BY ${1:column_name}"
+  },
+  {
+    "label": "CLUSTER BY",
+    "insertText": "CLUSTER BY ${1:column_name}"
+  },
+  {
+    "label": "GROUP BY ALL",
+    "insertText": "GROUP BY ALL"
+  },
+  {
+    "label": "ORDER BY",
+    "insertText": "ORDER BY ${1:expression}"
+  },
+  {
+    "label": "JOIN",
+    "insertText": "JOIN ${1:table_name}\n  ON ${2:left_column} = ${3:right_column}"
+  }
+]
